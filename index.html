@@ -82,11 +82,11 @@ select{width:100%;padding:13px;border:1px solid var(--line);border-radius:12px;f
   </div>
   <div class="playerSheet" id="playerSheet" onclick="if(event.target===this)closePlayerSheet()"><div class="playerSheetCard"><div class="sheetHandle"></div><div class="row"><div><h3 style="margin:0">Choose players</h3><div class="muted">Show one, several, or all schedules.</div></div><button onclick="closePlayerSheet()">Done</button></div><div id="playerSheetList" style="margin-top:10px"></div><div class="grid2" style="margin-top:14px"><button onclick="selectAllChildren()">Select All</button><button onclick="clearAllChildren()">Clear All</button></div></div></div>
  </div>
- <div id="cloudSchedule" class="coachOnly"></div>
- <div id="cloudGameDay" class="coachOnly"></div>
- <div class="card notice coachOnly"><div class="row"><div><b>GAME • Today • 6:30 PM</b><div class="muted">vs. Wildcats</div></div><span class="pill">11/12 Going</span></div><p><b>Riverside Sports Complex • Field 3</b></p><div class="muted">Arrive 5:45 PM • Park in the south lot and enter by the concession stand.</div><div id="scheduleWeather" class="muted" style="margin-top:10px">Weather: loading live NWS forecast…</div><div class="grid2" style="margin-top:12px"><button class="primary" onclick="openDirections('Riverside Sports Complex, Hamilton, OH')">📍 Directions</button><button onclick="show('team')">Attendance</button></div></div>
- <div class="card coachOnly"><div class="row"><div><b>PRACTICE • Tuesday • 6:00 PM</b><div class="muted">Team practice</div></div><span class="badge">PRACTICE</span></div><p><b>Joyce Park • Field 5</b></p><div class="muted">Arrive 5:45 PM • Bring hitting gear.</div><div class="grid2" style="margin-top:12px"><button class="primary" onclick="openDirections('Joyce Park, Fairfield, OH')">📍 Directions</button><button onclick="show('team')">Attendance</button></div></div>
- <div class="card coachOnly"><div class="row"><div><b>GAME • Saturday • 10:00 AM</b><div class="muted">at Thunder</div></div><span class="badge">GAME</span></div><p><b>Waterworks Park • Field 2</b></p><div class="muted">Arrive 9:15 AM • Use the north parking entrance.</div><div class="grid2" style="margin-top:12px"><button class="primary" onclick="openDirections('Waterworks Park, Fairfield, OH')">📍 Directions</button><button onclick="show('team')">Attendance</button></div></div>
+ <div class="coachOnly">
+  <div class="row" style="margin:6px 2px 10px"><div><b>Upcoming</b><div class="muted">Your next games and practices</div></div></div>
+  <div id="cloudSchedule"></div>
+  <div id="cloudGameDay"></div>
+ </div>
  <div id="addedEvents" class="coachOnly"></div>
  <button class="scheduleFab primary coachOnly" onclick="openScheduleAdd()" aria-label="Add schedule">＋</button>
 </section>
@@ -333,9 +333,24 @@ async function loadCloudSchedule(){
  if(isPrototypeMode()||!currentCloudTeam)return;
  const box=document.getElementById('cloudSchedule'); if(!box)return;
  const {data,error}=await nplayCloud.from('events').select('*').eq('team_id',currentCloudTeam.id).order('start_time',{ascending:true});
- if(error){box.innerHTML='<div class="card">Schedule could not load: '+escapeHtml(error.message)+'</div>';return}
- if(!data||!data.length){box.innerHTML='<div class="card"><b>No cloud events yet</b><div class="muted">Use + Add to create your first game or practice.</div></div>';return}
- box.innerHTML=data.map(e=>'<div class="card"><div class="row"><div><b>'+escapeHtml((e.event_type||'event').toUpperCase())+' • '+new Date(e.start_time).toLocaleString()+'</b><div class="muted">'+escapeHtml(e.opponent?('vs. '+e.opponent):(e.notes||''))+'</div></div><button onclick="openCloudEvent(\''+e.id+'\')">Game Day</button></div></div>').join('');
+ if(error){box.innerHTML='<div class="card"><b>Schedule unavailable</b><div class="muted">'+escapeHtml(error.message)+'</div></div>';return}
+ const upcoming=(data||[]).filter(e=>new Date(e.start_time).getTime()>=Date.now()-21600000);
+ if(!upcoming.length){box.innerHTML='<div class="card"><b>No upcoming events</b><div class="muted">Tap + to add your next game or practice.</div></div>';return}
+ const ids=upcoming.map(e=>e.id);
+ const [rr,cc]=await Promise.all([
+  nplayCloud.from('rsvps').select('event_id,response').in('event_id',ids),
+  nplayCloud.from('check_ins').select('event_id,checked_in').in('event_id',ids)
+ ]);
+ box.innerHTML=upcoming.map(e=>{
+  const when=new Date(e.start_time), arrival=e.arrival_time?new Date(e.arrival_time):null;
+  const going=(rr.data||[]).filter(x=>x.event_id===e.id&&x.response==='going').length;
+  const here=(cc.data||[]).filter(x=>x.event_id===e.id&&x.checked_in).length;
+  const isGame=(e.event_type||'').toLowerCase()==='game';
+  const title=isGame?(e.opponent?'vs. '+e.opponent:'Game'):'Practice';
+  const place=[e.venue_name,e.field_name].filter(Boolean).join(' • ');
+  const status=(going?going+' Going':'RSVPs open')+(here?' · '+here+' Checked In':'');
+  return '<div class="card" style="padding:14px"><div class="row"><div><div class="tiny muted" style="font-weight:800;text-transform:uppercase">'+escapeHtml(e.event_type||'Event')+' • '+escapeHtml(when.toLocaleDateString([], {weekday:'short',month:'short',day:'numeric'}))+'</div><b style="font-size:17px">'+escapeHtml(title)+'</b><div class="muted" style="margin-top:4px">'+escapeHtml(when.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}))+(place?' • '+escapeHtml(place):'')+'</div>'+(arrival?'<div class="tiny muted">Arrive '+escapeHtml(arrival.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}))+'</div>':'')+'<div class="tiny" style="margin-top:7px;font-weight:800">'+escapeHtml(status)+'</div></div><button class="primary" onclick="openCloudEvent(\''+e.id+'\')">Open Game</button></div></div>';
+ }).join('');
 }
 async function openCloudEvent(id){
  currentCloudEvent=id; show('schedule'); await renderCloudGameDay();
