@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Softball Coach</title>
+<style>
+:root{--bg:#f4f6f8;--card:#fff;--ink:#101418;--muted:#66717d;--line:#dfe4e8;--primary:#0B2D5B;--accent:#FF5A7A;--danger:#b42318;--warn:#a15c00}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;color:var(--ink)}
+.app{max-width:520px;margin:auto;min-height:100vh;padding-bottom:92px}.top{padding:calc(7px + env(safe-area-inset-top)) 14px 7px;background:var(--primary);color:white;position:sticky;top:0;z-index:5}
+.top small{opacity:.75;font-size:9px;line-height:1.1}.top h1{font-size:17px;line-height:1.05;margin:1px 0 0}.top .row{gap:7px}.top button{padding:5px 7px!important;font-size:10px!important;border-radius:9px!important}#roleLabel{display:none}.screen{display:none;padding:14px}.screen.active{display:block}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:0 2px 10px #00000008}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}.stack{display:grid;gap:9px}.muted{color:var(--muted);font-size:13px}.big{font-size:28px;font-weight:800}.score{font-size:44px;font-weight:850;letter-spacing:-2px}.pill{padding:6px 10px;border-radius:999px;background:#FFF0F3;color:#C93456;font-size:12px;font-weight:700}
+button{border:0;border-radius:14px;padding:13px 14px;font:inherit;font-weight:750;background:#e9edf0;color:var(--ink);touch-action:manipulation}
+button.primary{background:var(--accent);color:white} button.danger{background:#feeceb;color:var(--danger)} button.warn{background:#fff2d9;color:var(--warn)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.play button{min-height:58px;font-size:16px}.player{padding:11px 0;border-bottom:1px solid var(--line)}.player:last-child{border:0}
+.badge{font-size:12px;background:#eef1f3;padding:5px 8px;border-radius:8px}.nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);padding:7px 5px calc(7px + env(safe-area-inset-bottom));display:flex;justify-content:center;z-index:10}
+.navin{width:min(520px,100%);display:grid;grid-template-columns:repeat(5,1fr)}.nav button{background:transparent;padding:8px 2px;font-size:11px;color:var(--muted)}.nav button.on{color:var(--accent)}
+.nav b{display:block;font-size:19px;margin-bottom:2px}.notice{border-left:4px solid var(--accent)}.lightning{background:#fff7e8;border-color:#f3d6a0}.modal{display:none;position:fixed;inset:0;background:#0008;z-index:30;align-items:flex-end;justify-content:center}.modal.show{display:flex}.sheet{background:white;width:min(520px,100%);border-radius:24px 24px 0 0;padding:20px 16px calc(20px + env(safe-area-inset-bottom));max-height:78vh;overflow:auto}
+select{width:100%;padding:13px;border:1px solid var(--line);border-radius:12px;font-size:16px;background:white}.tiny{font-size:11px}.center{text-align:center}.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:12px}.tabs button{padding:10px 5px;font-size:12px}.tabs button.active{background:var(--primary);color:white}.chatbox{max-height:300px;overflow:auto;padding:4px 0}.msg{max-width:84%;padding:10px 12px;border-radius:15px;margin:8px 0;background:#eef1f3}.msg.me{margin-left:auto;background:#FFF0F3;border:1px solid #ffd0da}.msg b{display:block;font-size:12px;margin-bottom:3px}.composer{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:12px}.composer input{min-width:0;padding:13px;border:1px solid var(--line);border-radius:14px;font-size:16px;background:white}.unread{background:var(--accent);color:white;border-radius:999px;padding:2px 7px;font-size:10px}.auth{position:fixed;inset:0;z-index:100;background:#f4f6f8;overflow:auto}.authHero{background:var(--primary);color:white;padding:calc(42px + env(safe-area-inset-top)) 22px 28px;text-align:center}.authHero h1{font-size:30px;margin:8px 0}.authBody{max-width:520px;margin:auto;padding:18px}.roleCard{text-align:left;width:100%;background:white;border:1px solid var(--line);padding:18px;margin-bottom:12px}.roleCard strong{font-size:18px;display:block;margin-bottom:5px}.roleIcon{font-size:28px;float:right}.auth input{width:100%;padding:14px;border:1px solid var(--line);border-radius:12px;font-size:16px;margin:6px 0 12px}.familyOnly{display:none}.family-mode .coachOnly{display:none}.family-mode .familyOnly{display:block}.family-mode .coachOnly{display:none}.eyebrow{font-size:11px;font-weight:800;letter-spacing:.08em;color:var(--muted)}.heroEvent h2{margin:5px 0 3px;font-size:24px}.actionbar{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px}.sectionTitle{font-size:19px;margin:4px 0 12px}.moreRow{width:100%;display:flex;justify-content:space-between;align-items:center;background:white;border:1px solid var(--line);margin-bottom:8px;text-align:left}.prototypeTag{display:inline-block;background:#ffffff1f;border:1px solid #ffffff38;border-radius:999px;padding:5px 9px;font-size:11px;margin-top:12px}
+.themePreview{border-radius:16px;overflow:hidden;border:1px solid var(--line);margin:12px 0}.themePreviewHead{background:var(--primary);color:white;padding:14px;font-weight:800}.themePreviewBody{padding:14px;background:white}.colorRow{display:grid;grid-template-columns:1fr 58px;gap:10px;align-items:center;margin:10px 0}.colorRow input[type=color]{width:58px;height:44px;padding:2px;border:1px solid var(--line);border-radius:10px;background:white}.presetRow{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.presetRow button{font-size:12px;padding:11px 7px}.swatches{display:grid;grid-template-columns:repeat(6,1fr);gap:9px;margin:10px 0 14px}.swatch{width:100%;aspect-ratio:1;border-radius:50%;border:3px solid white;box-shadow:0 0 0 1px var(--line);padding:0}.swatch:active{transform:scale(.94)}
+
+.weatherStatus{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.weatherTemp{font-size:34px;font-weight:850;line-height:1}.weatherAlert{border-left:4px solid var(--danger);background:#fff2f1}.weatherGood{border-left:4px solid #16803c;background:#effaf3}.weatherLoading{border-left:4px solid #66717d}.forecastStrip{display:flex;gap:8px;overflow:auto;padding:2px 0 4px}.forecastItem{min-width:116px;border:1px solid var(--line);border-radius:13px;padding:10px;background:white}.weatherMeta{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}.weatherMeta span{font-size:11px;background:#eef1f3;border-radius:999px;padding:5px 8px}
+
+.scheduleFab{position:fixed;right:18px;bottom:82px;z-index:8;width:54px;height:54px;border-radius:50%;font-size:28px;padding:0;box-shadow:0 8px 24px #0003}.choiceGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.choiceCard{min-height:92px;text-align:left;padding:14px}.choiceCard b{display:block;font-size:15px;margin-bottom:5px}.formGrid{display:grid;gap:10px}.formGrid label{font-size:12px;font-weight:800;color:#64748b}.formGrid input,.formGrid select,.formGrid textarea{width:100%;box-sizing:border-box;margin-top:5px}.eventAdded{border-left:4px solid var(--accent)}
+
+.familyModeIntro{border:1px solid #ffd0da;background:#fff8fa}.familyToolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:2px 0 12px}.viewSegment{display:flex;background:#e9edf2;border-radius:12px;padding:3px;gap:2px}.viewSegment button{padding:8px 13px;border:0;background:transparent;border-radius:9px;font-size:14px}.viewSegment button.on{background:white;color:var(--primary);box-shadow:0 1px 4px #00000012}.familyActions{display:flex;gap:7px}.familyActions button{padding:8px 10px;font-size:13px}.selectionSummary{font-size:13px;color:var(--muted);margin:0 0 12px}.childDot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}.familyEvent{border-left:4px solid var(--primary)}.conflict{border:1px solid #f59e0b;background:#fffbeb}.calendarGrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}.calendarDay{min-height:54px;border:1px solid var(--line);border-radius:8px;padding:5px;font-size:11px;background:white}.calendarDay.hasEvent{background:#fff7f9}.eventDot{width:7px;height:7px;border-radius:50%;display:inline-block;margin:2px}.playerSheet{position:fixed;inset:0;background:#0007;z-index:120;display:none;align-items:flex-end}.playerSheet.show{display:flex}.playerSheetCard{background:white;width:100%;border-radius:22px 22px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom));max-height:78vh;overflow:auto}.sheetHandle{width:42px;height:5px;border-radius:9px;background:#d4d9df;margin:0 auto 14px}.playerRow{display:flex;align-items:center;justify-content:space-between;padding:14px 2px;border-bottom:1px solid var(--line)}.playerRow:last-child{border-bottom:0}.checkBox{width:26px;height:26px;border:2px solid #cbd2da;border-radius:8px;display:grid;place-items:center;font-weight:900}.checkBox.on{background:var(--primary);border-color:var(--primary);color:white}.familyModeOff{padding:16px;text-align:center}
+</style>
+</head>
+<body>
+<div id="auth" class="auth">
+ <div class="authHero"><div style="font-size:42px">🥎</div><h1>Welcome</h1><div style="opacity:.82">How are you using the app today?</div><span class="prototypeTag">PROTOTYPE MODE</span></div>
+ <div class="authBody" id="roleChoice">
+  <button class="roleCard" onclick="enterRole('coach')"><span class="roleIcon">📋</span><strong>Coach / Team Staff</strong><span class="muted">Manage and run your team</span></button>
+  <button class="roleCard" onclick="enterRole('family')"><span class="roleIcon">👨‍👩‍👧</span><strong>Player / Family</strong><span class="muted">Follow and participate with your team</span></button>
+  <p class="muted center tiny">No password needed while testing this prototype.</p>
+ </div>
+</div>
+<div class="app">
+<header class="top"><div class="row"><div><small>12U TIGERS • FALL 2026</small><h1 id="title">Coach Home</h1></div><button onclick="signOut()" style="padding:7px 9px;background:#ffffff22;color:white;font-size:11px">Sign Out</button></div><small id="roleLabel">COACH / TEAM STAFF</small></header>
+
+<section id="home" class="screen active">
+ <div class="card heroEvent"><div class="eyebrow">TODAY • 6:30 PM</div><h2>Tigers vs Wildcats</h2><div class="muted">Riverside Sports Complex • Field 3</div><div style="margin-top:9px"><span class="pill">11/12 attending</span> <span class="badge" id="homeWeatherBadge">Weather…</span></div><div class="actionbar"><button onclick="openDirections('Riverside Sports Complex, Hamilton, OH')">📍 Directions</button><button class="primary coachOnly" onclick="startGame()">Game Day →</button><button class="primary familyOnly" onclick="show('schedule')">Event Details →</button></div></div>
+ <div class="card coachOnly"><div class="eyebrow">GAME DAY CHECKLIST</div><h3 style="margin:7px 0 12px">Ready for first pitch?</h3><div class="stack"><div class="row"><span>Attendance</span><b>11/12 ✓</b></div><div class="row"><span>Lineup</span><b>Needs review ›</b></div><div class="row"><span>Defense</span><b>Set ›</b></div><div class="row"><span>Weather</span><b>Check ›</b></div></div><button class="primary" style="width:100%;margin-top:14px" onclick="show('team')">Review Game Plan</button></div>
+ <div class="card familyOnly"><div class="eyebrow">YOUR STATUS</div><div class="row"><div><h3 style="margin:5px 0">Going</h3><div class="muted">Arrival time 5:45 PM</div></div><button>Change RSVP</button></div></div>
+ <div class="card"><div class="row"><div><b>Latest team message</b><div class="muted">Coach • Arrive by 5:45 PM. Black jersey, gray pants.</div></div><button onclick="show('team');setTimeout(()=>hubTab('chat'),0)">Open</button></div></div>
+ <div class="card weatherLoading" id="homeWeatherCard"><div class="weatherStatus"><div><b>⚡ Live Weather & Alerts</b><div class="muted" id="homeWeatherText">Loading National Weather Service forecast for the game location…</div><div class="weatherMeta"><span>Riverside Sports Complex</span><span id="weatherUpdated">Not updated yet</span></div></div><div class="weatherTemp" id="homeTemp">--°</div></div><div id="homeAlert" style="margin-top:10px"></div><button style="width:100%;margin-top:12px" onclick="loadGameWeather(true)">↻ Refresh Weather</button></div>
+</section>
+
+<section id="schedule" class="screen">
+ <div class="card coachOnly"><div class="row"><div><b>Team Schedule</b><div class="muted">Games and practices in one place</div></div><button class="primary" onclick="openScheduleAdd()">＋ Add</button></div><div class="muted" style="margin-top:8px">Add one event, repeat practices, scan a schedule, or import a file.</div></div>
+ <div class="familyOnly" id="familySchedulePanel">
+  <div id="familyModePrompt" class="card familyModeIntro" style="display:none">
+   <div class="eyebrow">MULTIPLE PLAYERS CONNECTED</div><h3 style="margin:6px 0">Turn on Family Mode?</h3>
+   <p class="muted">Family Mode helps you manage more than one player's schedule from one place.</p>
+   <div class="stack"><div>✓ Combine only the players you select</div><div>✓ Day, Week, and Month views</div><div>✓ Detect schedule conflicts</div><div>✓ Directions and arrival details</div><div>✓ Export selected schedules to your calendar</div></div>
+   <div class="grid2" style="margin-top:14px"><button onclick="declineFamilyMode()">Not Now</button><button class="primary" onclick="enableFamilyMode()">Turn On Family Mode</button></div>
+  </div>
+  <div id="singlePlayerSchedule"></div>
+  <div id="familyModeUI" style="display:none">
+   <div class="familyToolbar">
+    <div class="viewSegment" id="viewControls"><button class="on" onclick="setFamilyView('day',this)">Day</button><button onclick="setFamilyView('week',this)">Week</button><button onclick="setFamilyView('month',this)">Month</button></div>
+    <div class="familyActions"><button onclick="openPlayerSheet()" id="playersButton">Players</button><button aria-label="Calendar options" onclick="exportFamilyCalendar()">↗︎</button></div>
+   </div>
+   <div class="selectionSummary" id="selectionSummary"></div>
+   <div id="familyConflict"></div><div id="familyCalendar"></div>
+   <div style="text-align:center;margin:16px 0 4px"><button class="tiny" onclick="disableFamilyMode()">Turn off Family Mode</button></div>
+  </div>
+  <div class="playerSheet" id="playerSheet" onclick="if(event.target===this)closePlayerSheet()"><div class="playerSheetCard"><div class="sheetHandle"></div><div class="row"><div><h3 style="margin:0">Choose players</h3><div class="muted">Show one, several, or all schedules.</div></div><button onclick="closePlayerSheet()">Done</button></div><div id="playerSheetList" style="margin-top:10px"></div><div class="grid2" style="margin-top:14px"><button onclick="selectAllChildren()">Select All</button><button onclick="clearAllChildren()">Clear All</button></div></div></div>
+ </div>
+ <div class="card notice coachOnly"><div class="row"><div><b>GAME • Today • 6:30 PM</b><div class="muted">vs. Wildcats</div></div><span class="pill">11/12 Going</span></div><p><b>Riverside Sports Complex • Field 3</b></p><div class="muted">Arrive 5:45 PM • Park in the south lot and enter by the concession stand.</div><div id="scheduleWeather" class="muted" style="margin-top:10px">Weather: loading live NWS forecast…</div><div class="grid2" style="margin-top:12px"><button class="primary" onclick="openDirections('Riverside Sports Complex, Hamilton, OH')">📍 Directions</button><button onclick="show('team')">Attendance</button></div></div>
+ <div class="card coachOnly"><div class="row"><div><b>PRACTICE • Tuesday • 6:00 PM</b><div class="muted">Team practice</div></div><span class="badge">PRACTICE</span></div><p><b>Joyce Park • Field 5</b></p><div class="muted">Arrive 5:45 PM • Bring hitting gear.</div><div class="grid2" style="margin-top:12px"><button class="primary" onclick="openDirections('Joyce Park, Fairfield, OH')">📍 Directions</button><button onclick="show('team')">Attendance</button></div></div>
+ <div class="card coachOnly"><div class="row"><div><b>GAME • Saturday • 10:00 AM</b><div class="muted">at Thunder</div></div><span class="badge">GAME</span></div><p><b>Waterworks Park • Field 2</b></p><div class="muted">Arrive 9:15 AM • Use the north parking entrance.</div><div class="grid2" style="margin-top:12px"><button class="primary" onclick="openDirections('Waterworks Park, Fairfield, OH')">📍 Directions</button><button onclick="show('team')">Attendance</button></div></div>
+ <div id="addedEvents" class="coachOnly"></div>
+ <button class="scheduleFab primary coachOnly" onclick="openScheduleAdd()" aria-label="Add schedule">＋</button>
+</section>
+
+<section id="games" class="screen">
+ <div class="card center"><div class="muted">TOP 1ST</div><div class="score"><span id="away">0</span> – <span id="homeScore">0</span></div><div class="muted">Wildcats &nbsp; • &nbsp; Tigers</div></div>
+ <div class="card"><div class="row"><div><div class="muted">AT BAT</div><div class="big" id="batter">#7 Emma</div></div><div><b id="count">0-0</b><div class="muted"><span id="outs">0</span> outs</div></div></div></div>
+ <div class="card play"><div class="grid3"><button onclick="eventPlay('Ball')">Ball</button><button onclick="eventPlay('Strike')">Strike</button><button onclick="eventPlay('Foul')">Foul</button><button class="primary" onclick="eventPlay('Single')">Single</button><button class="primary" onclick="eventPlay('Double')">Double</button><button class="primary" onclick="eventPlay('Triple')">Triple</button><button class="primary" onclick="eventPlay('Home Run')">Home Run</button><button onclick="eventPlay('Walk')">Walk</button><button onclick="eventPlay('Out')">Out</button></div></div>
+ <div class="grid2"><button onclick="openSub()">⇄ Lineup Change</button><button onclick="undo()">↶ Undo</button></div>
+ <div class="card" style="margin-top:12px"><b>Game Log</b><div id="log" class="muted" style="margin-top:8px">No plays yet.</div></div>
+</section>
+
+<section id="team" class="screen">
+ <div class="tabs"><button id="tabRoster" class="active" onclick="teamTab('roster')">Roster</button><button id="tabChat" onclick="teamTab('chat')">Chat <span id="chatUnread" class="unread">2</span></button><button id="tabAnnouncements" onclick="teamTab('announcements')">Announcements</button></div>
+ <div id="rosterPane">
+  <div class="card coachOnly"><div class="row"><div><b>Lineup</b><div class="muted">Build it or scan a card</div></div></div><div class="grid2" style="margin-top:12px"><button class="primary" onclick="openScan('ours')">📷 Scan Ours</button><button onclick="openScan('opponent')">📷 Scan Opponent</button></div><div id="lineup" class="stack" style="margin-top:14px"></div></div>
+  <div class="card"><div class="row"><div><b>Roster & Attendance</b><div class="muted coachOnly">Tap status to change it</div></div><button class="coachOnly" onclick="resetRoster()">Reset</button></div><div id="roster"></div></div>
+  <div class="card coachOnly"><b>Opponent Lineup</b><div id="opponentLineup" class="stack" style="margin-top:10px"><div class="muted">No opponent lineup scanned yet.</div></div></div>
+ </div>
+ <div id="chatPane" style="display:none"><div class="card"><div class="row"><div><b>Team Chat</b><div class="muted">Coaches & authorized family</div></div><span class="pill">12 members</span></div><div id="teamChat" class="chatbox"></div><div class="composer"><input id="chatInput" maxlength="240" placeholder="Message the team…" onkeydown="if(event.key==='Enter')sendChat()"><button class="primary" onclick="sendChat()">Send</button></div><div class="muted tiny" style="margin-top:9px">Prototype messages stay on this device until cloud accounts are connected.</div></div></div>
+ <div id="announcementsPane" style="display:none"><div class="card notice"><b>Coach Announcement</b><p>Arrive by 5:45 PM. Black jersey, gray pants. Please update attendance if plans change.</p><div class="muted">10 of 11 guardians acknowledged</div></div><div class="card coachOnly"><b>Quick Announcement</b><div class="grid2" style="margin-top:10px"><button onclick="alert('Prototype: Team notified of a weather delay.')">Weather Delay</button><button class="danger" onclick="alert('Prototype: Cancellation notice sent.')">Cancel Event</button></div></div></div>
+</section>
+
+<section id="more" class="screen">
+ <h2 class="sectionTitle">More</h2>
+ <button class="moreRow" onclick="toggleMore('statsPanel')"><span><b>▥ Stats</b><br><span class="muted">Live batting & season stats</span></span><b>›</b></button>
+ <div id="statsPanel" class="card" style="display:none"><b>Live Batting Stats</b><div id="statsTable" style="margin-top:8px"></div></div>
+ <button class="moreRow" onclick="alert('Video library is planned. Cloud video storage is not connected in this prototype yet.')"><span><b>▶ Video</b><br><span class="muted">Game video & future play clips</span></span><b>›</b></button>
+ <button class="moreRow" onclick="alert('Season record will update automatically from completed games in the full version.')"><span><b>🏆 Season Record</b><br><span class="muted">Wins, losses, ties & history</span></span><b>›</b></button>
+ <button class="moreRow" onclick="toggleMore('weatherPanel');loadGameWeather(true)"><span><b>⚡ Weather Safety</b><br><span class="muted">Live NWS forecast, official alerts & delay workflow</span></span><b>›</b></button>
+ <div id="weatherPanel" class="card" style="display:none"><div class="row"><div><b>Live Weather</b><div class="muted">Riverside Sports Complex • Field 3</div></div><button onclick="loadGameWeather(true)">Refresh</button></div><div id="weatherPanelCurrent" style="margin-top:12px" class="muted">Loading…</div><div id="weatherAlertsList" style="margin-top:12px"></div><div class="forecastStrip" id="forecastStrip" style="margin-top:12px"></div><button class="warn" style="width:100%;margin-top:12px" onclick="weatherDelay()">Start Weather Delay Workflow</button><div class="muted tiny" style="margin-top:10px">Weather source: U.S. National Weather Service. This does not include precision lightning-strike proximity. The app never declares conditions safe to resume.</div></div>
+ <button class="moreRow" onclick="toggleMore('settingsPanel')"><span><b>⚙ Settings</b><br><span class="muted">Account, permissions & team appearance</span></span><b>›</b></button>
+ <div id="settingsPanel" class="card" style="display:none">
+  <b>Settings</b>
+  <button class="moreRow coachOnly" style="margin-top:10px" onclick="toggleMore('appearancePanel')"><span><b>🎨 Team Appearance</b><br><span class="muted">Personalize the app with your team colors</span></span><b>›</b></button>
+  <div id="appearancePanel" class="card coachOnly" style="display:none">
+   <b>Team Colors</b><div class="muted" style="margin-top:4px">Choose a primary and accent color. Safety colors stay standardized.</div>
+   <div style="margin-top:14px"><b>Choose Primary</b><div class="muted tiny">Header, selected tabs and team identity</div></div>
+   <div class="swatches">
+    <button class="swatch" aria-label="Navy" title="Navy" style="background:#0B2D5B" onclick="pickThemeColor('primary','#0B2D5B')"></button><button class="swatch" aria-label="Royal Blue" title="Royal Blue" style="background:#155EEF" onclick="pickThemeColor('primary','#155EEF')"></button><button class="swatch" aria-label="Carolina Blue" title="Carolina Blue" style="background:#4B9CD3" onclick="pickThemeColor('primary','#4B9CD3')"></button><button class="swatch" aria-label="Sky Blue" title="Sky Blue" style="background:#38BDF8" onclick="pickThemeColor('primary','#38BDF8')"></button><button class="swatch" aria-label="Aqua" title="Aqua" style="background:#22D3EE" onclick="pickThemeColor('primary','#22D3EE')"></button><button class="swatch" aria-label="Teal" title="Teal" style="background:#0F766E" onclick="pickThemeColor('primary','#0F766E')"></button><button class="swatch" aria-label="Forest Green" title="Forest Green" style="background:#166534" onclick="pickThemeColor('primary','#166534')"></button><button class="swatch" aria-label="Kelly Green" title="Kelly Green" style="background:#15803D" onclick="pickThemeColor('primary','#15803D')"></button><button class="swatch" aria-label="Lime" title="Lime" style="background:#84CC16" onclick="pickThemeColor('primary','#84CC16')"></button><button class="swatch" aria-label="Yellow" title="Yellow" style="background:#FACC15" onclick="pickThemeColor('primary','#FACC15')"></button><button class="swatch" aria-label="Gold" title="Gold" style="background:#D4A017" onclick="pickThemeColor('primary','#D4A017')"></button><button class="swatch" aria-label="Vegas Gold" title="Vegas Gold" style="background:#C5B358" onclick="pickThemeColor('primary','#C5B358')"></button><button class="swatch" aria-label="Orange" title="Orange" style="background:#F97316" onclick="pickThemeColor('primary','#F97316')"></button><button class="swatch" aria-label="Coral" title="Coral" style="background:#FF5A7A" onclick="pickThemeColor('primary','#FF5A7A')"></button><button class="swatch" aria-label="Red" title="Red" style="background:#B42318" onclick="pickThemeColor('primary','#B42318')"></button><button class="swatch" aria-label="Maroon" title="Maroon" style="background:#7F1D1D" onclick="pickThemeColor('primary','#7F1D1D')"></button><button class="swatch" aria-label="Purple" title="Purple" style="background:#6D28D9" onclick="pickThemeColor('primary','#6D28D9')"></button><button class="swatch" aria-label="Lavender" title="Lavender" style="background:#A78BFA" onclick="pickThemeColor('primary','#A78BFA')"></button><button class="swatch" aria-label="Pink" title="Pink" style="background:#EC4899" onclick="pickThemeColor('primary','#EC4899')"></button><button class="swatch" aria-label="Hot Pink" title="Hot Pink" style="background:#FF2D8D" onclick="pickThemeColor('primary','#FF2D8D')"></button><button class="swatch" aria-label="Silver" title="Silver" style="background:#94A3B8" onclick="pickThemeColor('primary','#94A3B8')"></button><button class="swatch" aria-label="Charcoal" title="Charcoal" style="background:#374151" onclick="pickThemeColor('primary','#374151')"></button><button class="swatch" aria-label="Black" title="Black" style="background:#111827" onclick="pickThemeColor('primary','#111827')"></button><button class="swatch" aria-label="White" title="White" style="background:#FFFFFF" onclick="pickThemeColor('primary','#FFFFFF')"></button>
+   </div>
+   <div style="margin-top:4px"><b>Choose Accent</b><div class="muted tiny">Buttons, highlights and active navigation</div></div>
+   <div class="swatches">
+    <button class="swatch" aria-label="Navy" title="Navy" style="background:#0B2D5B" onclick="pickThemeColor('accent','#0B2D5B')"></button><button class="swatch" aria-label="Royal Blue" title="Royal Blue" style="background:#155EEF" onclick="pickThemeColor('accent','#155EEF')"></button><button class="swatch" aria-label="Carolina Blue" title="Carolina Blue" style="background:#4B9CD3" onclick="pickThemeColor('accent','#4B9CD3')"></button><button class="swatch" aria-label="Sky Blue" title="Sky Blue" style="background:#38BDF8" onclick="pickThemeColor('accent','#38BDF8')"></button><button class="swatch" aria-label="Aqua" title="Aqua" style="background:#22D3EE" onclick="pickThemeColor('accent','#22D3EE')"></button><button class="swatch" aria-label="Teal" title="Teal" style="background:#0F766E" onclick="pickThemeColor('accent','#0F766E')"></button><button class="swatch" aria-label="Forest Green" title="Forest Green" style="background:#166534" onclick="pickThemeColor('accent','#166534')"></button><button class="swatch" aria-label="Kelly Green" title="Kelly Green" style="background:#15803D" onclick="pickThemeColor('accent','#15803D')"></button><button class="swatch" aria-label="Lime" title="Lime" style="background:#84CC16" onclick="pickThemeColor('accent','#84CC16')"></button><button class="swatch" aria-label="Yellow" title="Yellow" style="background:#FACC15" onclick="pickThemeColor('accent','#FACC15')"></button><button class="swatch" aria-label="Gold" title="Gold" style="background:#D4A017" onclick="pickThemeColor('accent','#D4A017')"></button><button class="swatch" aria-label="Vegas Gold" title="Vegas Gold" style="background:#C5B358" onclick="pickThemeColor('accent','#C5B358')"></button><button class="swatch" aria-label="Orange" title="Orange" style="background:#F97316" onclick="pickThemeColor('accent','#F97316')"></button><button class="swatch" aria-label="Coral" title="Coral" style="background:#FF5A7A" onclick="pickThemeColor('accent','#FF5A7A')"></button><button class="swatch" aria-label="Red" title="Red" style="background:#B42318" onclick="pickThemeColor('accent','#B42318')"></button><button class="swatch" aria-label="Maroon" title="Maroon" style="background:#7F1D1D" onclick="pickThemeColor('accent','#7F1D1D')"></button><button class="swatch" aria-label="Purple" title="Purple" style="background:#6D28D9" onclick="pickThemeColor('accent','#6D28D9')"></button><button class="swatch" aria-label="Lavender" title="Lavender" style="background:#A78BFA" onclick="pickThemeColor('accent','#A78BFA')"></button><button class="swatch" aria-label="Pink" title="Pink" style="background:#EC4899" onclick="pickThemeColor('accent','#EC4899')"></button><button class="swatch" aria-label="Hot Pink" title="Hot Pink" style="background:#FF2D8D" onclick="pickThemeColor('accent','#FF2D8D')"></button><button class="swatch" aria-label="Silver" title="Silver" style="background:#94A3B8" onclick="pickThemeColor('accent','#94A3B8')"></button><button class="swatch" aria-label="Charcoal" title="Charcoal" style="background:#374151" onclick="pickThemeColor('accent','#374151')"></button><button class="swatch" aria-label="Black" title="Black" style="background:#111827" onclick="pickThemeColor('accent','#111827')"></button><button class="swatch" aria-label="White" title="White" style="background:#FFFFFF" onclick="pickThemeColor('accent','#FFFFFF')"></button>
+   </div>
+   <div class="colorRow"><label for="primaryColor"><b>Custom Primary</b><br><span class="muted tiny">Choose any team color</span></label><input id="primaryColor" type="color" value="#0B2D5B" oninput="previewTheme()"></div>
+   <div class="colorRow"><label for="accentColor"><b>Custom Accent</b><br><span class="muted tiny">Choose any accent color</span></label><input id="accentColor" type="color" value="#FF5A7A" oninput="previewTheme()"></div>
+   <div class="themePreview"><div class="themePreviewHead">12U TIGERS</div><div class="themePreviewBody"><b>Live Team Preview</b><div class="muted">Changes appear across the app immediately. Save when you like the combination.</div><button class="primary" style="margin-top:10px">Game Day →</button></div></div>
+   <div class="presetRow"><button onclick="setPreset('#0B2D5B','#FF5A7A')">Navy + Coral</button><button onclick="setPreset('#155EEF','#D4A017')">Blue + Gold</button><button onclick="setPreset('#6D28D9','#84CC16')">Purple + Lime</button><button onclick="setPreset('#111827','#D4A017')">Black + Gold</button><button onclick="setPreset('#7F1D1D','#C5B358')">Maroon + Vegas Gold</button><button onclick="setPreset('#0F766E','#FF5A7A')">Teal + Coral</button></div>
+   <div class="grid2" style="margin-top:10px"><button onclick="resetTheme()">Reset Default</button><button class="primary" onclick="saveTheme()">Save Team Colors</button></div>
+  </div>
+  <button class="moreRow" style="margin-top:10px" onclick="alert('Account and permission controls will be connected when secure accounts are added.')"><span><b>Account & Permissions</b><br><span class="muted">Roles, access & team controls</span></span><b>›</b></button>
+ </div>
+ <button style="width:100%;margin-top:8px" onclick="signOut()">Switch Role</button>
+</section>
+</div>
+
+<nav class="nav"><div class="navin">
+<button class="on" data-s="home" onclick="show('home')"><b>⌂</b>Home</button>
+<button data-s="schedule" onclick="show('schedule')"><b>▣</b>Schedule</button>
+<button class="coachOnly" data-s="games" onclick="show('games')"><b>◆</b>Game Day</button>
+<button data-s="team" onclick="show('team')"><b>♟</b>Team</button>
+<button data-s="more" onclick="show('more')"><b>•••</b>More</button>
+</div></nav>
+
+
+<div id="scheduleModal" class="modal"><div class="sheet">
+ <div class="row"><h2 style="margin:0">Add to Schedule</h2><button onclick="closeScheduleAdd()">Close</button></div>
+ <div id="scheduleChoices">
+  <p class="muted">Choose the fastest way to add games or practices.</p>
+  <div class="choiceGrid">
+   <button class="choiceCard" onclick="scheduleMode('scan')"><b>📸 Scan Schedule</b><span class="muted">Photo or screenshot</span></button>
+   <button class="choiceCard" onclick="scheduleMode('import')"><b>📄 Import Schedule</b><span class="muted">PDF, image, CSV or calendar file</span></button>
+   <button class="choiceCard" onclick="scheduleMode('single')"><b>＋ Add Game / Practice</b><span class="muted">Quick single event</span></button>
+   <button class="choiceCard" onclick="scheduleMode('repeat')"><b>🔁 Recurring Practice</b><span class="muted">Create many at once</span></button>
+  </div>
+ </div>
+ <div id="scheduleScan" style="display:none"><button onclick="scheduleMode('choices')">‹ Back</button><h3>Scan Schedule</h3><p class="muted">Take a photo or choose a screenshot. The production version will extract dates, times, opponents and venues, then require review before saving.</p><input id="schedulePhoto" type="file" accept="image/*" capture="environment" onchange="scheduleFileChosen(this,'scan')"><div id="scheduleScanReview" style="margin-top:12px"></div></div>
+ <div id="scheduleImport" style="display:none"><button onclick="scheduleMode('choices')">‹ Back</button><h3>Import Schedule</h3><p class="muted">Choose a PDF, image, CSV or calendar file. Prototype import demonstrates the review workflow.</p><input id="scheduleFile" type="file" accept=".pdf,.csv,.ics,image/*" onchange="scheduleFileChosen(this,'import')"><div id="scheduleImportReview" style="margin-top:12px"></div></div>
+ <div id="scheduleSingle" style="display:none"><button onclick="scheduleMode('choices')">‹ Back</button><h3>Add Game or Practice</h3><div class="formGrid"><label>EVENT TYPE<select id="evType"><option>Game</option><option>Practice</option></select></label><label>OPPONENT / TITLE<input id="evOpponent" placeholder="Wildcats or Team Practice"></label><label>DATE<input id="evDate" type="date"></label><label>TIME<input id="evTime" type="time"></label><label>ARRIVAL TIME<input id="evArrival" type="time"></label><label>VENUE<input id="evVenue" list="venueList" placeholder="Start typing a field or complex"><datalist id="venueList"><option value="Riverside Sports Complex"><option value="Joyce Park"><option value="Waterworks Park"><option value="Fairfield Youth Athletic Association"><option value="Harbin Park"></datalist></label><label>FIELD<input id="evField" placeholder="Field 3"></label><label>ADDRESS<input id="evAddress" placeholder="Street address, city, state"></label><label>VENUE NOTES<textarea id="evNotes" placeholder="Parking, gate, field directions…"></textarea></label><button class="primary" onclick="saveSingleEvent()">Add to Schedule</button></div></div>
+ <div id="scheduleRepeat" style="display:none"><button onclick="scheduleMode('choices')">‹ Back</button><h3>Recurring Practice</h3><div class="formGrid"><label>PRACTICE DAYS<select id="rpDays"><option value="2,4">Tuesday & Thursday</option><option value="1,3">Monday & Wednesday</option><option value="6">Saturday</option></select></label><label>START DATE<input id="rpStart" type="date"></label><label>THROUGH<input id="rpEnd" type="date"></label><label>TIME<input id="rpTime" type="time" value="18:00"></label><label>VENUE<input id="rpVenue" list="venueList" placeholder="Joyce Park"></label><label>FIELD<input id="rpField" placeholder="Field 5"></label><button class="primary" onclick="saveRecurring()">Create Practices</button></div></div>
+ </div></div>
+
+<div id="directionsModal" class="modal"><div class="sheet">
+ <div class="row"><h2 style="margin:0">Get Directions</h2><button onclick="closeDirections()">Close</button></div>
+ <p class="muted">Choose the navigation app you prefer. Only apps installed on the phone will open successfully.</p>
+ <div class="stack">
+  <button class="primary" onclick="goMap('apple')">Apple Maps</button>
+  <button onclick="goMap('google')">Google Maps</button>
+  <button onclick="goMap('waze')">Waze</button>
+ </div>
+ <p class="muted tiny" id="directionDestination" style="margin-top:12px"></p>
+</div></div>
+
+<div id="scanModal" class="modal"><div class="sheet">
+ <div class="row"><h2 style="margin:0" id="scanTitle">Scan Lineup</h2><button onclick="closeScan()">Close</button></div>
+ <p class="muted">Take a photo of a handwritten or printed lineup card. The production version will use image recognition to read names, jersey numbers, batting order and positions, then ask you to review anything uncertain before confirming.</p>
+ <input id="lineupPhoto" type="file" accept="image/*" capture="environment" style="display:none" onchange="photoChosen(event)">
+ <button class="primary" style="width:100%;margin:8px 0" onclick="document.getElementById('lineupPhoto').click()">📷 Take or Choose Photo</button>
+ <div id="scanPreview" class="card" style="display:none;margin-top:12px"><img id="scanImage" alt="Lineup photo preview" style="width:100%;max-height:220px;object-fit:contain;border-radius:12px"><p class="muted">Photo captured. OCR/AI recognition is not connected in this prototype yet. Below is a simulated review so you can test the workflow.</p><button onclick="simulateScan()">Generate Review</button></div>
+ <div id="scanReview" style="display:none"><h3>Review before confirming</h3><div id="scanRows" class="stack"></div><p class="muted">⚠ Always verify the generated lineup before game use.</p><button class="primary" style="width:100%" onclick="confirmScan()">Confirm Lineup</button></div>
+</div></div>
+
+<div id="subModal" class="modal" onclick="if(event.target===this)closeSub()"><div class="sheet">
+ <div class="row"><h2 style="margin:0">Quick Lineup Change</h2><button onclick="closeSub()">Done</button></div>
+ <p class="muted">Designed for one-handed dugout use. Choose the player leaving and the replacement.</p>
+ <label class="muted">PLAYER OUT</label><select id="outSel"></select><br><br>
+ <label class="muted">PLAYER IN</label><select id="inSel"></select><br><br>
+ <div class="grid2"><button onclick="makeSub('Position Change')">Position Change</button><button class="primary" onclick="makeSub('Substitution')">Substitute</button></div>
+</div></div>
+
+<script>
+let selectedRole='coach';
+function enterRole(role){selectedRole=role;localStorage.setItem('sb_role',role);applyRole(role);document.getElementById('auth').style.display='none'}
+function applyRole(role){document.body.classList.toggle('family-mode',role==='family');document.getElementById('roleLabel').textContent=role==='family'?'PLAYER / FAMILY':'COACH / TEAM STAFF';titles.home=role==='family'?'Family Home':'Coach Home';document.getElementById('title').textContent=titles.home;if(role==='family'&&document.getElementById('games').classList.contains('active'))show('home')}
+function signOut(){localStorage.removeItem('sb_role');document.getElementById('auth').style.display='block';show('home')}
+const base=[
+{id:1,n:'#7 Emma',pos:'SS',att:'Going'},{id:2,n:'#12 Mia',pos:'CF',att:'Going'},
+{id:3,n:'#4 Ava',pos:'C',att:'Going'},{id:4,n:'#22 Sophia',pos:'1B',att:'Going'},
+{id:5,n:'#9 Lily',pos:'3B',att:'Going'},{id:6,n:'#3 Zoe',pos:'LF',att:'Going'},
+{id:7,n:'#18 Chloe',pos:'P',att:'Going'},{id:8,n:'#5 Harper',pos:'2B',att:'Going'},
+{id:9,n:'#11 Ella',pos:'RF',att:'Going'},{id:10,n:'#14 Grace',pos:'OF',att:'Out'},
+{id:11,n:'#2 Lucy',pos:'UTIL',att:'Going'},{id:12,n:'#16 Nora',pos:'UTIL',att:'Going'}];
+let players=JSON.parse(localStorage.getItem('sb_players')||JSON.stringify(base));
+let batting=[1,2,3,4,5,6,7,8,9], opponentBatting=[], scanMode='ours', events=[], balls=0,strikes=0,outs=0,batterIndex=0;
+const titles={home:'Coach Home',schedule:'Schedule',games:'Game Day',team:'Team',more:'More'};
+function save(){localStorage.setItem('sb_players',JSON.stringify(players))}
+function show(id){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.getElementById('title').textContent=titles[id];document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.s===id));if(id==='schedule'&&selectedRole==='family')renderFamilySchedule();if(id==='stats')renderStats()}
+function renderRoster(){let el=document.getElementById('roster');el.innerHTML=players.map(p=>`<div class="player row"><div><b>${p.n}</b><div class="muted">${p.pos}</div></div><button onclick="cycleAtt(${p.id})">${p.att}</button></div>`).join('');renderLineup()}
+function cycleAtt(id){let p=players.find(x=>x.id===id), a=['Going','Maybe','Out'];p.att=a[(a.indexOf(p.att)+1)%3];save();renderRoster()}
+function resetRoster(){players=JSON.parse(JSON.stringify(base));save();renderRoster()}
+function renderLineup(){document.getElementById('lineup').innerHTML=batting.map((id,i)=>{let p=players.find(x=>x.id===id);return `<div class="row"><span><b>${i+1}. ${p.n}</b></span><span class="badge">${p.pos}</span></div>`}).join('')}
+function current(){return players.find(x=>x.id===batting[batterIndex%batting.length])}
+function updateGame(){document.getElementById('batter').textContent=current().n;document.getElementById('count').textContent=`${balls}-${strikes}`;document.getElementById('outs').textContent=outs;document.getElementById('log').innerHTML=events.length?events.slice().reverse().slice(0,8).map(e=>`<div>${e.player}: ${e.type}</div>`).join(''):'No plays yet.'}
+function startGame(){show('games');updateGame()}
+function nextBatter(){balls=0;strikes=0;batterIndex=(batterIndex+1)%batting.length}
+function eventPlay(type){
+ let p=current(), ev={player:p.n,id:p.id,type};
+ if(type==='Ball'){balls++; if(balls>=4){ev.type='Walk';events.push(ev);nextBatter()}else events.push(ev)}
+ else if(type==='Strike'){strikes++;if(strikes>=3){ev.type='Strikeout';events.push(ev);outs++;nextBatter()}else events.push(ev)}
+ else if(type==='Foul'){if(strikes<2)strikes++;events.push(ev)}
+ else if(type==='Out'){events.push(ev);outs++;nextBatter()}
+ else {events.push(ev);nextBatter()}
+ if(outs>=3){outs=0;events.push({player:'Game',type:'Side retired — inning advances'});}
+ updateGame();renderStats()
+}
+function undo(){if(!events.length)return;events.pop();balls=0;strikes=0;outs=0;batterIndex=0; // replay simple state
+ for(let e of events){if(e.player==='Game')continue; let idx=batting.findIndex(id=>players.find(p=>p.id===id)?.n===e.player); if(idx>=0)batterIndex=idx;
+ if(e.type==='Ball')balls++; else if(e.type==='Strike')strikes++; else if(e.type==='Foul'){if(strikes<2)strikes++} else {if(e.type==='Out'||e.type==='Strikeout')outs++; nextBatter()}}
+ updateGame();renderStats()}
+function renderStats(){
+ let rows=players.map(p=>{let es=events.filter(e=>e.id===p.id);let ab=es.filter(e=>['Single','Double','Triple','Home Run','Out','Strikeout'].includes(e.type)).length;let h=es.filter(e=>['Single','Double','Triple','Home Run'].includes(e.type)).length;let avg=ab?(h/ab).toFixed(3).replace(/^0/,''):'.000';return {p,ab,h,avg}}).filter(x=>x.ab||x.h);
+ document.getElementById('statsTable').innerHTML=rows.length?rows.map(x=>`<div class="player row"><b>${x.p.n}</b><span class="muted">AB ${x.ab} &nbsp; H ${x.h} &nbsp; AVG ${x.avg}</span></div>`).join(''):'<div class="muted">Record game events to generate stats.</div>'}
+function openSub(){let out=document.getElementById('outSel'),inn=document.getElementById('inSel');out.innerHTML=batting.map(id=>{let p=players.find(x=>x.id===id);return `<option value="${id}">${p.n} • ${p.pos}</option>`}).join('');inn.innerHTML=players.filter(p=>!batting.includes(p.id)&&p.att!=='Out').map(p=>`<option value="${p.id}">${p.n} • ${p.pos}</option>`).join('');document.getElementById('subModal').classList.add('show')}
+function closeSub(){document.getElementById('subModal').classList.remove('show')}
+function makeSub(kind){let oid=+document.getElementById('outSel').value,nid=+document.getElementById('inSel').value;if(!nid){alert('No available bench player.');return}let i=batting.indexOf(oid),a=players.find(x=>x.id===oid),b=players.find(x=>x.id===nid);batting[i]=nid;events.push({player:'Lineup',type:`${kind}: ${b.n} for ${a.n}`});closeSub();renderLineup();updateGame()}
+
+function openScan(mode){scanMode=mode;document.getElementById('scanTitle').textContent=mode==='ours'?'Scan Our Lineup':'Scan Opponent Lineup';document.getElementById('scanPreview').style.display='none';document.getElementById('scanReview').style.display='none';document.getElementById('scanModal').classList.add('show')}
+function closeScan(){document.getElementById('scanModal').classList.remove('show')}
+function photoChosen(e){let f=e.target.files&&e.target.files[0];if(!f)return;document.getElementById('scanImage').src=URL.createObjectURL(f);document.getElementById('scanPreview').style.display='block';document.getElementById('scanReview').style.display='none'}
+function simulateScan(){let rows=scanMode==='ours'?players.slice(0,9).map((p,i)=>`${i+1}. ${p.n} — ${p.pos}`):['1. #8 Riley — CF','2. #21 Madison — SS','3. #5 Avery — C','4. #17 Peyton — 1B','5. #10 Taylor — 3B','6. #2 Kennedy — P','7. #14 Reagan — LF','8. #6 Quinn — 2B','9. #11 Skylar — RF'];document.getElementById('scanRows').innerHTML=rows.map((r,i)=>`<div class="row player"><span>${r}</span><span class="pill">${i===2?'CHECK':'MATCH'}</span></div>`).join('');document.getElementById('scanReview').style.display='block'}
+function confirmScan(){if(scanMode==='ours'){batting=players.slice(0,9).map(p=>p.id);renderLineup()}else{opponentBatting=['#8 Riley — CF','#21 Madison — SS','#5 Avery — C','#17 Peyton — 1B','#10 Taylor — 3B','#2 Kennedy — P','#14 Reagan — LF','#6 Quinn — 2B','#11 Skylar — RF'];document.getElementById('opponentLineup').innerHTML=opponentBatting.map((x,i)=>`<div class="row"><b>${i+1}. ${x}</b></div>`).join('')}closeScan();alert('Lineup confirmed. In the full version, this will be generated from the actual photo after coach review.')}
+
+
+const defaultTeamChat=[{name:'Coach',text:'Reminder: please update attendance before 3 PM.',time:'2:08 PM',me:true},{name:"Emma's Parent",text:'Emma is good to go tonight.',time:'2:14 PM'},{name:"Mia's Parent",text:'We may be about 10 minutes late.',time:'2:19 PM'}];
+const defaultGameChat=[{name:'Coach',text:'We are on Field 3 tonight.',time:'4:45 PM',me:true},{name:"Emma's Parent",text:'We’ll be there by 5:40.',time:'4:48 PM'}];
+let teamChat=JSON.parse(localStorage.getItem('sb_team_chat')||JSON.stringify(defaultTeamChat));
+let gameChat=JSON.parse(localStorage.getItem('sb_game_chat')||JSON.stringify(defaultGameChat));
+function esc(x){return String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function teamTab(which){['roster','chat','announcements'].forEach(x=>{document.getElementById(x+'Pane').style.display=x===which?'block':'none'});document.getElementById('tabRoster').classList.toggle('active',which==='roster');document.getElementById('tabChat').classList.toggle('active',which==='chat');document.getElementById('tabAnnouncements').classList.toggle('active',which==='announcements');if(which==='chat')document.getElementById('chatUnread').style.display='none'}
+function hubTab(which){teamTab(which==='gameThread'?'chat':which)}
+function toggleMore(id){let e=document.getElementById(id);e.style.display=e.style.display==='none'?'block':'none';if(id==='statsPanel')renderStats()}
+function renderChats(){document.getElementById('teamChat').innerHTML=teamChat.map(m=>`<div class="msg ${m.me?'me':''}"><b>${esc(m.name)} <span class="muted tiny">${esc(m.time)}</span></b>${esc(m.text)}</div>`).join('');document.getElementById('gameChat').innerHTML=gameChat.map(m=>`<div class="msg ${m.me?'me':''}"><b>${esc(m.name)} <span class="muted tiny">${esc(m.time)}</span></b>${esc(m.text)}</div>`).join('')}
+function sendChat(){let i=document.getElementById('chatInput'),t=i.value.trim();if(!t)return;teamChat.push({name:'Coach',text:t,time:new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}),me:true});localStorage.setItem('sb_team_chat',JSON.stringify(teamChat));i.value='';renderChats();document.getElementById('teamChat').scrollTop=9999}
+function sendGameChat(){let i=document.getElementById('gameInput'),t=i.value.trim();if(!t)return;gameChat.push({name:'Coach',text:t,time:new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}),me:true});localStorage.setItem('sb_game_chat',JSON.stringify(gameChat));i.value='';renderChats();document.getElementById('gameChat').scrollTop=9999}
+
+
+let customEvents=JSON.parse(localStorage.getItem('sb_custom_events')||'[]');
+const familyEvents=[
+ {child:'Emma',team:'Tigers',type:'Practice',day:'Mon',date:'2026-10-05',time:'6:00 PM',end:'7:30 PM',venue:'Joyce Park',field:'Field 5',address:'Joyce Park, Fairfield, OH',arrival:'5:45 PM'},
+ {child:'Jack',team:'Reds',type:'Game',day:'Tue',date:'2026-10-06',time:'5:30 PM',end:'7:00 PM',venue:'Waterworks Park',field:'Field 2',address:'Waterworks Park, Fairfield, OH',arrival:'4:45 PM'},
+ {child:'Ava',team:'Lightning',type:'Practice',day:'Thu',date:'2026-10-08',time:'7:00 PM',end:'8:30 PM',venue:'Harbin Park',field:'Field 6',address:'Harbin Park, Fairfield, OH',arrival:'6:45 PM'},
+ {child:'Emma',team:'Tigers',type:'Game',day:'Sat',date:'2026-10-10',time:'10:00 AM',end:'11:30 AM',venue:'Riverside Sports Complex',field:'Field 3',address:'Riverside Sports Complex, Hamilton, OH',arrival:'9:15 AM'},
+ {child:'Ava',team:'Lightning',type:'Game',day:'Sat',date:'2026-10-10',time:'10:30 AM',end:'12:00 PM',venue:'Waterworks Park',field:'Field 1',address:'Waterworks Park, Fairfield, OH',arrival:'9:45 AM'},
+ {child:'Jack',team:'Reds',type:'Practice',day:'Sun',date:'2026-10-11',time:'3:00 PM',end:'4:30 PM',venue:'Fairfield Youth Athletic Association',field:'Field 4',address:'Fairfield Youth Athletic Association, Fairfield, OH',arrival:'2:45 PM'}
+];
+let familyView='day';
+const familyChildren=['Emma','Ava','Jack'];
+let familyModeEnabled=localStorage.getItem('sb_family_mode')==='true';
+let familyModeDeclined=localStorage.getItem('sb_family_mode_declined')==='true';
+let selectedChildren=new Set(JSON.parse(localStorage.getItem('sb_family_children')||'["Emma"]'));
+const childColors={Emma:'#FF5A7A',Ava:'#6D28D9',Jack:'#0284C7'};
+function saveFamilyChildren(){localStorage.setItem('sb_family_children',JSON.stringify([...selectedChildren]))}
+function enableFamilyMode(){familyModeEnabled=true;familyModeDeclined=false;localStorage.setItem('sb_family_mode','true');localStorage.removeItem('sb_family_mode_declined');if(!selectedChildren.size)selectedChildren.add('Emma');saveFamilyChildren();renderFamilySchedule()}
+function declineFamilyMode(){familyModeDeclined=true;localStorage.setItem('sb_family_mode_declined','true');renderFamilySchedule()}
+function disableFamilyMode(){familyModeEnabled=false;localStorage.setItem('sb_family_mode','false');renderFamilySchedule()}
+function setFamilyView(v,btn){familyView=v;document.querySelectorAll('#viewControls button').forEach(x=>x.classList.remove('on'));btn.classList.add('on');renderFamilySchedule()}
+function toggleFamilyChild(child){selectedChildren.has(child)?selectedChildren.delete(child):selectedChildren.add(child);saveFamilyChildren();renderFamilySchedule()}
+function selectAllChildren(){selectedChildren=new Set(familyChildren);saveFamilyChildren();renderFamilySchedule()}
+function clearAllChildren(){selectedChildren.clear();saveFamilyChildren();renderFamilySchedule()}
+function openPlayerSheet(){renderPlayerSheet();document.getElementById('playerSheet').classList.add('show')}
+function closePlayerSheet(){document.getElementById('playerSheet').classList.remove('show')}
+function renderPlayerSheet(){let el=document.getElementById('playerSheetList');if(!el)return;el.innerHTML=familyChildren.map(c=>`<button class="playerRow" style="width:100%;background:white;border-radius:0;border-left:0;border-right:0;border-top:0;text-align:left" onclick="toggleFamilyChild('${c}');renderPlayerSheet()"><span><span class="childDot" style="background:${childColors[c]}"></span><b>${c}</b><span class="muted"> • ${familyEvents.find(e=>e.child===c)?.team||''}</span></span><span class="checkBox ${selectedChildren.has(c)?'on':''}">${selectedChildren.has(c)?'✓':''}</span></button>`).join('')}
+function updateSelectionSummary(){let names=[...selectedChildren];let summary=document.getElementById('selectionSummary'),btn=document.getElementById('playersButton');if(summary)summary.textContent=names.length===familyChildren.length?'Showing all players':names.length?`Showing: ${names.join(' + ')}`:'No players selected';if(btn)btn.textContent=names.length===familyChildren.length?'Players: All':`Players: ${names.length}`}
+function filteredFamilyEvents(){return familyEvents.filter(e=>selectedChildren.has(e.child))}
+function familyEventCard(e){return `<div class="card familyEvent" style="border-left-color:${childColors[e.child]}"><div class="row"><div><b><span class="childDot" style="background:${childColors[e.child]}"></span>${e.child} • ${e.team}</b><div class="muted">${e.type} • ${e.day} ${e.time}–${e.end}</div></div><span class="badge">${e.type.toUpperCase()}</span></div><p><b>${e.venue} • ${e.field}</b></p><div class="muted">Arrive ${e.arrival}</div><div class="grid2" style="margin-top:10px"><button class="primary" onclick="openDirections('${e.address.replace(/'/g,"\\'")}')">📍 Directions</button><button onclick="downloadOneEvent('${e.child}','${e.date}','${e.time}','${e.end}')">Add to Calendar</button></div></div>`}
+function renderSinglePlayerSchedule(){let el=document.getElementById('singlePlayerSchedule');if(!el)return;let child=familyChildren[0], ev=familyEvents.filter(e=>e.child===child);el.innerHTML=`<div class="card"><div class="row"><div><b>${child}'s Schedule</b><div class="muted">Family Mode is off</div></div>${familyChildren.length>1?'<button onclick="enableFamilyMode()">Family Mode</button>':''}</div></div>`+ev.map(familyEventCard).join('')}
+function renderFamilySchedule(){let prompt=document.getElementById('familyModePrompt'),ui=document.getElementById('familyModeUI'),single=document.getElementById('singlePlayerSchedule');if(!ui)return;let hasMultiple=familyChildren.length>1;prompt.style.display=hasMultiple&&!familyModeEnabled&&!familyModeDeclined?'block':'none';ui.style.display=familyModeEnabled?'block':'none';single.style.display=familyModeEnabled?'none':'block';if(!familyModeEnabled){renderSinglePlayerSchedule();return}updateSelectionSummary();renderPlayerSheet();let el=document.getElementById('familyCalendar');let ev=filteredFamilyEvents();let conflict=document.getElementById('familyConflict');let conflicts=[];for(let i=0;i<ev.length;i++)for(let j=i+1;j<ev.length;j++)if(ev[i].date===ev[j].date&&ev[i].child!==ev[j].child){let a=toMinutes(ev[i].time),ae=toMinutes(ev[i].end),b=toMinutes(ev[j].time),be=toMinutes(ev[j].end);if(a<be&&b<ae)conflicts.push([ev[i],ev[j]])}conflict.innerHTML=conflicts.length?`<div class="card conflict"><b>⚠ Family schedule conflict</b><div class="muted">${conflicts[0][0].child} and ${conflicts[0][1].child} have overlapping events.</div></div>`:'';
+ if(!selectedChildren.size){el.innerHTML='<div class="card familyModeOff"><b>No players selected</b><div class="muted">Choose one or more players above to populate the schedule.</div></div>';return}
+ if(familyView==='month'){let days='';for(let d=1;d<=31;d++){let ds=`2026-10-${String(d).padStart(2,'0')}`,hits=ev.filter(e=>e.date===ds);days+=`<div class="calendarDay ${hits.length?'hasEvent':''}"><b>${d}</b><br>${hits.map(h=>`<span class="eventDot" style="background:${childColors[h.child]}"></span>`).join('')}</div>`}el.innerHTML='<div class="card"><div class="calendarGrid"><b>Su</b><b>Mo</b><b>Tu</b><b>We</b><b>Th</b><b>Fr</b><b>Sa</b>'+days+'</div></div>';return}
+ if(familyView==='day'){let firstDate=ev.map(e=>e.date).sort()[0];let dayEvents=ev.filter(e=>e.date===firstDate);el.innerHTML=dayEvents.length?dayEvents.map(familyEventCard).join(''):'<div class="card muted">No events for the selected player(s).</div>';return}
+ el.innerHTML=ev.map(familyEventCard).join('')||'<div class="card muted">No events for the selected player(s).</div>'}
+function toMinutes(t){let m=t.match(/(\d+):(\d+)\s*(AM|PM)/i);if(!m)return 0;let h=+m[1],min=+m[2];if(m[3].toUpperCase()==='PM'&&h!==12)h+=12;if(m[3].toUpperCase()==='AM'&&h===12)h=0;return h*60+min}
+function exportFamilyCalendar(){let ev=filteredFamilyEvents();if(!ev.length)return alert('Select at least one player with scheduled events.');saveICS(ev,([...selectedChildren].join('-')||'family').toLowerCase()+'-schedule.ics')}
+function downloadOneEvent(child,date,time,end){let e=familyEvents.find(x=>x.child===child&&x.date===date&&x.time===time&&x.end===end);if(e)saveICS([e],child.toLowerCase()+'-'+date+'.ics')}
+function to24(t){let m=t.match(/(\d+):(\d+)\s*(AM|PM)/i),h=+m[1],min=m[2],ap=m[3].toUpperCase();if(ap==='PM'&&h!==12)h+=12;if(ap==='AM'&&h===12)h=0;return String(h).padStart(2,'0')+min+'00'}
+function icsEscape(x){return String(x).replace(/\\/g,'\\\\').replace(/,/g,'\\,').replace(/;/g,'\\;').replace(/\n/g,'\\n')}
+function makeICS(list){let lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Softball Family Schedule//EN','CALSCALE:GREGORIAN'];list.forEach((e,i)=>{let d=e.date.replaceAll('-','');lines.push('BEGIN:VEVENT',`UID:${d}-${i}-${e.child}@softballprototype`,`DTSTART:${d}T${to24(e.time)}`,`DTEND:${d}T${to24(e.end)}`,`SUMMARY:${icsEscape(e.child+' • '+e.team+' '+e.type)}`,`LOCATION:${icsEscape(e.venue+' '+e.field+', '+e.address)}`,`DESCRIPTION:${icsEscape('Arrival: '+e.arrival)}`,'END:VEVENT')});lines.push('END:VCALENDAR');return lines.join('\r\n')}
+function saveICS(list,name){let blob=new Blob([makeICS(list)],{type:'text/calendar;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+
+function downloadOneEvent(child,date,time,end){let e=familyEvents.find(x=>x.child===child&&x.date===date&&x.time===time&&x.end===end);if(e)saveICS([e],child.toLowerCase()+'-'+date+'.ics')}
+function openScheduleAdd(){scheduleMode('choices');document.getElementById('scheduleModal').classList.add('show')}
+function closeScheduleAdd(){document.getElementById('scheduleModal').classList.remove('show')}
+function scheduleMode(mode){let ids={choices:'scheduleChoices',scan:'scheduleScan',import:'scheduleImport',single:'scheduleSingle',repeat:'scheduleRepeat'};Object.values(ids).forEach(id=>document.getElementById(id).style.display='none');document.getElementById(ids[mode]).style.display='block'}
+function scheduleFileChosen(input,kind){let f=input.files&&input.files[0];if(!f)return;let target=document.getElementById(kind==='scan'?'scheduleScanReview':'scheduleImportReview');target.innerHTML=`<div class="card notice"><b>Ready to review: ${esc(f.name)}</b><p class="muted">Prototype preview: image/PDF recognition is simulated until the schedule-reading service is connected.</p><div class="stack"><div>✓ Sat 10:00 AM — vs Thunder — Waterworks Park • Field 2</div><div>✓ Sun 9:00 AM — Bracket Game — Field TBD</div><div>⚠ One venue needs confirmation</div></div><button class="primary" style="width:100%;margin-top:12px" onclick="acceptImportedSchedule()">Review & Add 2 Events</button></div>`}
+function acceptImportedSchedule(){customEvents.push({type:'Game',title:'vs Thunder',date:'Saturday',time:'10:00 AM',venue:'Waterworks Park',field:'Field 2',address:'Waterworks Park, Fairfield, OH',arrival:'9:15 AM',notes:'Imported from schedule'},{type:'Game',title:'Bracket Game',date:'Sunday',time:'9:00 AM',venue:'Tournament Venue',field:'Field TBD',address:'',arrival:'8:15 AM',notes:'Venue needs confirmation'});saveCustomEvents();closeScheduleAdd();renderCustomEvents();alert('2 prototype events added. Always review scanned/imported schedules before game use.')}
+function formatClock(v){if(!v)return'';let [h,m]=v.split(':').map(Number),ap=h>=12?'PM':'AM';h=h%12||12;return `${h}:${String(m).padStart(2,'0')} ${ap}`}
+function saveSingleEvent(){let type=document.getElementById('evType').value,date=document.getElementById('evDate').value,time=document.getElementById('evTime').value,venue=document.getElementById('evVenue').value.trim();if(!date||!time||!venue){alert('Please add the date, time, and venue.');return}customEvents.push({type,title:document.getElementById('evOpponent').value.trim()||(type==='Game'?'Opponent TBD':'Team Practice'),date,time:formatClock(time),venue,field:document.getElementById('evField').value.trim(),address:document.getElementById('evAddress').value.trim()||venue,arrival:formatClock(document.getElementById('evArrival').value),notes:document.getElementById('evNotes').value.trim()});saveCustomEvents();closeScheduleAdd();renderCustomEvents()}
+function saveRecurring(){let start=document.getElementById('rpStart').value,end=document.getElementById('rpEnd').value,venue=document.getElementById('rpVenue').value.trim(),time=document.getElementById('rpTime').value;if(!start||!end||!venue){alert('Please add start date, through date, and venue.');return}let days=document.getElementById('rpDays').value.split(',').map(Number),d=new Date(start+'T12:00:00'),last=new Date(end+'T12:00:00'),count=0;while(d<=last&&count<60){if(days.includes(d.getDay())){customEvents.push({type:'Practice',title:'Team Practice',date:d.toISOString().slice(0,10),time:formatClock(time),venue,field:document.getElementById('rpField').value.trim(),address:venue,arrival:'',notes:'Recurring practice'});count++}d.setDate(d.getDate()+1)}saveCustomEvents();closeScheduleAdd();renderCustomEvents();alert(`${count} practices added.`)}
+function saveCustomEvents(){localStorage.setItem('sb_custom_events',JSON.stringify(customEvents))}
+function renderCustomEvents(){let el=document.getElementById('addedEvents');if(!el)return;el.innerHTML=customEvents.map((e,i)=>`<div class="card eventAdded"><div class="row"><div><b>${esc(e.type.toUpperCase())} • ${esc(e.date)} • ${esc(e.time)}</b><div class="muted">${esc(e.title)}</div></div><span class="badge">ADDED</span></div><p><b>${esc(e.venue)}${e.field?' • '+esc(e.field):''}</b></p>${e.arrival?`<div class="muted">Arrive ${esc(e.arrival)}</div>`:''}${e.notes?`<div class="muted">${esc(e.notes)}</div>`:''}<div class="grid2" style="margin-top:12px"><button class="primary" onclick="openDirections('${String(e.address||e.venue).replace(/'/g,"\\'")}')">📍 Directions</button><button onclick="removeCustomEvent(${i})">Remove</button></div></div>`).join('')}
+function removeCustomEvent(i){customEvents.splice(i,1);saveCustomEvents();renderCustomEvents()}
+
+let mapDestination='';
+function openDirections(destination){mapDestination=destination;document.getElementById('directionDestination').textContent='Destination: '+destination;document.getElementById('directionsModal').classList.add('show')}
+function closeDirections(){document.getElementById('directionsModal').classList.remove('show')}
+function goMap(app){let q=encodeURIComponent(mapDestination);let url=app==='apple'?`https://maps.apple.com/?daddr=${q}&dirflg=d`:app==='google'?`https://www.google.com/maps/dir/?api=1&destination=${q}`:`https://waze.com/ul?q=${q}&navigate=yes`;window.location.href=url}
+
+const gameWeather={name:'Riverside Sports Complex • Field 3',lat:39.3996,lon:-84.5613};
+let weatherCache=null;
+function weatherIcon(text=''){text=text.toLowerCase();if(text.includes('thunder'))return '⛈️';if(text.includes('snow'))return '🌨️';if(text.includes('rain')||text.includes('shower'))return '🌧️';if(text.includes('cloud')||text.includes('overcast'))return '☁️';if(text.includes('partly')||text.includes('mostly'))return '⛅';if(text.includes('fog'))return '🌫️';return '☀️'}
+function escWeather(x){return esc(x||'')}
+async function nwsJson(url){let r=await fetch(url,{headers:{'Accept':'application/geo+json'}});if(!r.ok)throw new Error('Weather service returned '+r.status);return r.json()}
+async function loadGameWeather(force=false){
+ if(weatherCache&&!force&&Date.now()-weatherCache.time<10*60*1000){renderWeather(weatherCache);return}
+ const text=document.getElementById('homeWeatherText'); if(text)text.textContent='Loading live National Weather Service data…';
+ try{
+  const point=await nwsJson(`https://api.weather.gov/points/${gameWeather.lat},${gameWeather.lon}`);
+  const forecastUrl=point.properties.forecastHourly||point.properties.forecast;
+  const [forecast,alerts]=await Promise.all([nwsJson(forecastUrl),nwsJson(`https://api.weather.gov/alerts/active?point=${gameWeather.lat},${gameWeather.lon}`)]);
+  weatherCache={time:Date.now(),periods:(forecast.properties.periods||[]).slice(0,6),alerts:(alerts.features||[])};renderWeather(weatherCache);
+ }catch(err){
+  if(text)text.textContent='Live weather could not load. Tap Refresh to try again.';
+  let b=document.getElementById('homeWeatherBadge');if(b)b.textContent='Unavailable';
+  let pc=document.getElementById('weatherPanelCurrent');if(pc)pc.innerHTML='<b>Weather temporarily unavailable.</b><div class="muted">Check an official weather source before play.</div>';
+  console.error(err);
+ }
+}
+function renderWeather(data){
+ const p=data.periods[0]||{}; const alerts=data.alerts||[]; const severe=alerts.some(a=>['Extreme','Severe'].includes(a.properties?.severity));
+ const desc=p.shortForecast||'Forecast available';const temp=(p.temperature??'--')+(p.temperatureUnit||'°');const icon=weatherIcon(desc);
+ let badge=document.getElementById('homeWeatherBadge');if(badge)badge.textContent=`${icon} ${p.temperature??'--'}°`;
+ let t=document.getElementById('homeTemp');if(t)t.textContent=`${p.temperature??'--'}°`;
+ let tx=document.getElementById('homeWeatherText');if(tx)tx.textContent=desc+(alerts.length?` • ${alerts.length} active alert${alerts.length>1?'s':''}`:' • No active NWS alerts');
+ let up=document.getElementById('weatherUpdated');if(up)up.textContent='Updated '+new Date(data.time).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+ let card=document.getElementById('homeWeatherCard');if(card){card.classList.remove('weatherLoading','weatherGood','weatherAlert');card.classList.add(alerts.length?'weatherAlert':'weatherGood')}
+ let ha=document.getElementById('homeAlert');if(ha)ha.innerHTML=alerts.length?`<button class="danger" style="width:100%" onclick="showWeatherAlerts()">⚠ ${escWeather(alerts[0].properties.event)} — View Alert</button>`:'<div class="muted">✓ No active NWS watches, warnings or advisories for this point.</div>';
+ let sw=document.getElementById('scheduleWeather');if(sw)sw.innerHTML=`Weather: <b>${icon} ${p.temperature??'--'}° • ${escWeather(desc)}</b>${alerts.length?' • <b>⚠ Active alert</b>':''}`;
+ let pc=document.getElementById('weatherPanelCurrent');if(pc)pc.innerHTML=`<div class="weatherStatus"><div><b>${icon} ${escWeather(desc)}</b><div class="muted">Wind ${escWeather(p.windSpeed||'—')} ${escWeather(p.windDirection||'')}</div></div><div class="weatherTemp">${p.temperature??'--'}°</div></div>`;
+ let al=document.getElementById('weatherAlertsList');if(al)al.innerHTML=alerts.length?alerts.map(a=>`<div class="card weatherAlert" style="margin:8px 0"><b>⚠ ${escWeather(a.properties.event)}</b><div class="muted">${escWeather(a.properties.headline||a.properties.description||'Official NWS alert')}</div></div>`).join(''):'<div class="card weatherGood" style="margin:8px 0"><b>✓ No active NWS alerts</b><div class="muted">Continue to monitor conditions and local officials.</div></div>';
+ let fs=document.getElementById('forecastStrip');if(fs)fs.innerHTML=data.periods.slice(0,6).map(x=>`<div class="forecastItem"><b>${escWeather(x.name||'Next')}</b><div style="font-size:24px;margin:6px 0">${weatherIcon(x.shortForecast)}</div><b>${x.temperature??'--'}°</b><div class="muted tiny">${escWeather(x.shortForecast||'')}</div></div>`).join('');
+}
+function showWeatherAlerts(){show('more');let e=document.getElementById('weatherPanel');e.style.display='block';renderWeather(weatherCache||{periods:[],alerts:[]});setTimeout(()=>e.scrollIntoView({behavior:'smooth',block:'start'}),100)}
+
+function weatherDelay(){alert('WEATHER DELAY\n\nPrototype safety workflow activated. In production this would pause the game, alert authorized adults/guardians, and show an advisory safety timer. The app would not automatically declare the field safe.')}
+
+function applyTheme(primary,accent){document.documentElement.style.setProperty('--primary',primary);document.documentElement.style.setProperty('--accent',accent);let p=document.getElementById('primaryColor'),a=document.getElementById('accentColor');if(p)p.value=primary;if(a)a.value=accent}
+function previewTheme(){applyTheme(document.getElementById('primaryColor').value,document.getElementById('accentColor').value)}
+function pickThemeColor(which,value){let p=document.getElementById('primaryColor').value,a=document.getElementById('accentColor').value;if(which==='primary')p=value;else a=value;applyTheme(p,a)}
+function setPreset(primary,accent){applyTheme(primary,accent)}
+function saveTheme(){let primary=document.getElementById('primaryColor').value,accent=document.getElementById('accentColor').value;localStorage.setItem('sb_theme',JSON.stringify({primary,accent}));applyTheme(primary,accent);alert('Team colors saved on this device for the prototype.')}
+function resetTheme(){localStorage.removeItem('sb_theme');applyTheme('#0B2D5B','#FF5A7A')}
+let savedTheme=JSON.parse(localStorage.getItem('sb_theme')||'null');if(savedTheme)applyTheme(savedTheme.primary,savedTheme.accent);
+let savedRole=localStorage.getItem('sb_role');if(savedRole){selectedRole=savedRole;applyRole(savedRole);document.getElementById('auth').style.display='none'}
+renderRoster();renderStats();updateGame();renderChats();renderCustomEvents();setTimeout(()=>loadGameWeather(false),250);
+</script>
+</body></html>
