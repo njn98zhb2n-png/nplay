@@ -248,9 +248,13 @@ async function loadCloudTeam(){
  if(!nplayCloud)return;
  const {data:userData}=await nplayCloud.auth.getUser();const uid=userData?.user?.id;if(!uid)return;
  let {data:memberships,error}=await nplayCloud.from('team_members').select('team_id,role,status,teams(id,name,primary_color,accent_color)').eq('user_id',uid).eq('status','active').limit(1);
- if(error){console.warn('NPlay team load:',error.message);return}
- if(memberships&&memberships.length&&memberships[0].teams){
-   currentCloudTeam=memberships[0].teams;setTeamNameUI(currentCloudTeam.name);await loadCloudRoster();updateCloudSetupUI();return;
+ if(error){console.warn('NPlay team load:',error.message)}
+ if(memberships&&memberships.length){
+   const m=memberships[0];
+   const team=Array.isArray(m.teams)?m.teams[0]:m.teams;
+   if(team){currentCloudTeam=team;setTeamNameUI(team.name);await loadCloudRoster();updateCloudSetupUI();return}
+   const linked=await nplayCloud.from('teams').select('id,name,primary_color,accent_color').eq('id',m.team_id).maybeSingle();
+   if(linked.data){currentCloudTeam=linked.data;setTeamNameUI(linked.data.name);await loadCloudRoster();updateCloudSetupUI();return}
  }
  const {data:owned}=await nplayCloud.from('teams').select('id,name,primary_color,accent_color').eq('created_by',uid).limit(1);
  if(owned&&owned.length){currentCloudTeam=owned[0];setTeamNameUI(currentCloudTeam.name);await loadCloudRoster()}
