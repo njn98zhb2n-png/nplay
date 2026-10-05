@@ -114,8 +114,8 @@ select{width:100%;padding:13px;border:1px solid var(--line);border-radius:12px;f
    <button class="primary" style="width:100%;margin-top:10px" onclick="addCloudPlayer()">Add Player</button>
    <div id="cloudRosterMsg" class="muted tiny" style="min-height:18px;margin-top:7px"></div>
   </div>
-  <div class="card coachOnly"><div class="row"><div><b>Lineup</b><div class="muted">Build it or scan a card</div></div></div><div class="grid2" style="margin-top:12px"><button class="primary" onclick="openScan('ours')">📷 Scan Ours</button><button onclick="openScan('opponent')">📷 Scan Opponent</button></div><div id="lineup" class="stack" style="margin-top:14px"></div></div>
-  <div class="card"><div class="row"><div><b>Roster & Attendance</b><div class="muted coachOnly">Tap status to change it</div></div><button class="coachOnly" onclick="resetRoster()">Reset</button></div><div id="roster"></div></div>
+  <div id="demoLineupCard" class="card coachOnly"><div class="row"><div><b>Lineup</b><div class="muted">Build it or scan a card</div></div></div><div class="grid2" style="margin-top:12px"><button class="primary" onclick="openScan('ours')">📷 Scan Ours</button><button onclick="openScan('opponent')">📷 Scan Opponent</button></div><div id="lineup" class="stack" style="margin-top:14px"></div></div>
+  <div id="demoRosterCard" class="card"><div class="row"><div><b>Roster & Attendance</b><div class="muted coachOnly">Tap status to change it</div></div><button class="coachOnly" onclick="resetRoster()">Reset</button></div><div id="roster"></div></div>
   <div class="card coachOnly"><b>Opponent Lineup</b><div id="opponentLineup" class="stack" style="margin-top:10px"><div class="muted">No opponent lineup scanned yet.</div></div></div>
  </div>
  <div id="chatPane" style="display:none"><div class="card"><div class="row"><div><b>Team Chat</b><div class="muted">Coaches & authorized family</div></div><span class="pill">12 members</span></div><div id="teamChat" class="chatbox"></div><div class="composer"><input id="chatInput" maxlength="240" placeholder="Message the team…" onkeydown="if(event.key==='Enter')sendChat()"><button class="primary" onclick="sendChat()">Send</button></div><div class="muted tiny" style="margin-top:9px">Prototype messages stay on this device until cloud accounts are connected.</div></div></div>
@@ -262,6 +262,9 @@ function updateCloudSetupUI(){
  const signedIn=!!nplayCloud && !isPrototypeMode();
  if(setup)setup.style.setProperty('display',(signedIn&&!currentCloudTeam)?'block':'none','important');
  if(add)add.style.setProperty('display',(signedIn&&!!currentCloudTeam)?'block':'none','important');
+ const demoLineup=document.getElementById('demoLineupCard'),demoRoster=document.getElementById('demoRosterCard');
+ if(demoLineup)demoLineup.style.display=(signedIn&&!currentCloudTeam)?'none':'block';
+ if(demoRoster)demoRoster.style.display=(signedIn&&!currentCloudTeam)?'none':'block';
 }
 async function createCloudTeam(){
  const msg=document.getElementById('cloudTeamSetupMsg');
@@ -328,7 +331,7 @@ async function saveTeamName(){
  if(msg){msg.textContent='Team name saved.';msg.style.color='var(--muted)'}
 }
 
-function finishRole(role){selectedRole=role;localStorage.setItem('sb_role',role);applyRole(role);document.getElementById('auth').style.display='none'}
+function finishRole(role){selectedRole=role;localStorage.setItem('sb_role',role);applyRole(role);document.getElementById('auth').style.display='none';if(role==='coach'){show('team');setTimeout(updateCloudSetupUI,0)}}
 function applyRole(role){document.body.classList.toggle('family-mode',role==='family');document.getElementById('roleLabel').textContent=role==='family'?'PLAYER / FAMILY':'COACH / TEAM STAFF';titles.home=role==='family'?'Family Home':'Coach Home';document.getElementById('title').textContent=titles.home;if(role==='family'&&document.getElementById('games').classList.contains('active'))show('home')}
 async function signOut(){if(nplayCloud&&!isPrototypeMode())await nplayCloud.auth.signOut();sessionStorage.removeItem('nplay_prototype_mode');localStorage.removeItem('sb_role');currentCloudTeam=null;document.getElementById('authForm').style.display='block';document.getElementById('roleChoice').style.display='none';document.getElementById('auth').style.display='block';authMsg('');show('home')}
 const base=[
