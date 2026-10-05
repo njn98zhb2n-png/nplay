@@ -235,7 +235,7 @@ function enterPrototypeMode(){
 }
 function isPrototypeMode(){return sessionStorage.getItem('nplay_prototype_mode')==='1'}
 function showRoleChoice(){document.getElementById('authForm').style.display='none';document.getElementById('roleChoice').style.display='block'}
-async function afterCloudAuth(){const {data}=await nplayCloud.auth.getUser();if(!data.user)return;await loadCloudTeam();const savedRole=localStorage.getItem('sb_role');if(savedRole){selectedRole=savedRole;applyRole(savedRole);document.getElementById('auth').style.display='none'}else showRoleChoice()}
+async function afterCloudAuth(){const {data}=await nplayCloud.auth.getUser();if(!data.user)return;await loadCloudTeam();const savedRole=localStorage.getItem('sb_role');if(savedRole){selectedRole=savedRole;applyRole(savedRole);document.getElementById('auth').style.display='none';if(savedRole==='coach'){show('team');updateCloudSetupUI()}}else showRoleChoice()}
 
 let currentCloudTeam=null;
 function setTeamNameUI(name){
