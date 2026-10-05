@@ -239,7 +239,7 @@ function enterPrototypeMode(){
 }
 function isPrototypeMode(){return sessionStorage.getItem('nplay_prototype_mode')==='1'}
 function showRoleChoice(){document.getElementById('authForm').style.display='none';document.getElementById('roleChoice').style.display='block'}
-async function afterCloudAuth(){const {data}=await nplayCloud.auth.getUser();if(!data.user)return;await loadCloudTeam();const savedRole=localStorage.getItem('sb_role');if(savedRole){selectedRole=savedRole;applyRole(savedRole);document.getElementById('auth').style.display='none';if(savedRole==='coach'){show('team');updateCloudSetupUI()}}else showRoleChoice()}
+async function afterCloudAuth(){const {data}=await nplayCloud.auth.getUser();if(!data.user)return;await loadCloudTeam();const pref=await nplayCloud.from('user_preferences').select('role,primary_color,accent_color').eq('user_id',data.user.id).maybeSingle();const savedRole=pref.data?.role||localStorage.getItem('sb_role');if(pref.data?.primary_color&&pref.data?.accent_color)applyTheme(pref.data.primary_color,pref.data.accent_color);if(savedRole){selectedRole=savedRole;localStorage.setItem('sb_role',savedRole);applyRole(savedRole);document.getElementById('auth').style.display='none';if(savedRole==='coach'){show('team');updateCloudSetupUI()}}else showRoleChoice()}
 
 let currentCloudTeam=null;
 function setTeamNameUI(name){
@@ -413,9 +413,9 @@ async function saveTeamName(){
  if(msg){msg.textContent='Team name saved.';msg.style.color='var(--muted)'}
 }
 
-function finishRole(role){selectedRole=role;localStorage.setItem('sb_role',role);applyRole(role);document.getElementById('auth').style.display='none';if(role==='coach'){show('team');setTimeout(updateCloudSetupUI,0)}}
+async function finishRole(role){selectedRole=role;localStorage.setItem('sb_role',role);if(nplayCloud&&!isPrototypeMode()){const u=await nplayCloud.auth.getUser();if(u.data?.user)await nplayCloud.from('user_preferences').upsert({user_id:u.data.user.id,role,updated_at:new Date().toISOString()})}applyRole(role);document.getElementById('auth').style.display='none';if(role==='coach'){show('team');setTimeout(updateCloudSetupUI,0)}}
 function applyRole(role){document.body.classList.toggle('family-mode',role==='family');document.getElementById('roleLabel').textContent=role==='family'?'PLAYER / FAMILY':'COACH / TEAM STAFF';titles.home=role==='family'?'Family Home':'Coach Home';document.getElementById('title').textContent=titles.home;if(role==='family'&&document.getElementById('games').classList.contains('active'))show('home')}
-async function signOut(){if(nplayCloud&&!isPrototypeMode())await nplayCloud.auth.signOut();sessionStorage.removeItem('nplay_prototype_mode');localStorage.removeItem('sb_role');currentCloudTeam=null;document.getElementById('authForm').style.display='block';document.getElementById('roleChoice').style.display='none';document.getElementById('auth').style.display='block';authMsg('');show('home')}
+async function signOut(){if(nplayCloud&&!isPrototypeMode())await nplayCloud.auth.signOut();sessionStorage.removeItem('nplay_prototype_mode');currentCloudTeam=null;document.getElementById('authForm').style.display='block';document.getElementById('roleChoice').style.display='none';document.getElementById('auth').style.display='block';authMsg('');show('home')}
 const base=[
 {id:1,n:'#7 Emma',pos:'SS',att:'Going'},{id:2,n:'#12 Mia',pos:'CF',att:'Going'},
 {id:3,n:'#4 Ava',pos:'C',att:'Going'},{id:4,n:'#22 Sophia',pos:'1B',att:'Going'},
@@ -580,7 +580,7 @@ function applyTheme(primary,accent){document.documentElement.style.setProperty('
 function previewTheme(){applyTheme(document.getElementById('primaryColor').value,document.getElementById('accentColor').value)}
 function pickThemeColor(which,value){let p=document.getElementById('primaryColor').value,a=document.getElementById('accentColor').value;if(which==='primary')p=value;else a=value;applyTheme(p,a)}
 function setPreset(primary,accent){applyTheme(primary,accent)}
-function saveTheme(){let primary=document.getElementById('primaryColor').value,accent=document.getElementById('accentColor').value;localStorage.setItem('sb_theme',JSON.stringify({primary,accent}));applyTheme(primary,accent);alert('Team colors saved on this device for the prototype.')}
+async function saveTheme(){let primary=document.getElementById('primaryColor').value,accent=document.getElementById('accentColor').value;localStorage.setItem('sb_theme',JSON.stringify({primary,accent}));applyTheme(primary,accent);if(nplayCloud&&!isPrototypeMode()){const u=await nplayCloud.auth.getUser();if(u.data?.user){const role=selectedRole||localStorage.getItem('sb_role')||'coach';const {error}=await nplayCloud.from('user_preferences').upsert({user_id:u.data.user.id,role,primary_color:primary,accent_color:accent,updated_at:new Date().toISOString()});if(!error){alert('Team colors saved.');return}}}alert('Team colors saved on this device.')}
 function resetTheme(){localStorage.removeItem('sb_theme');applyTheme('#0B2D5B','#FF5A7A')}
 let savedTheme=JSON.parse(localStorage.getItem('sb_theme')||'null');if(savedTheme)applyTheme(savedTheme.primary,savedTheme.accent);
 async function initNPlayAuth(){
