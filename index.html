@@ -31,11 +31,20 @@ select{width:100%;padding:13px;border:1px solid var(--line);border-radius:12px;f
 </head>
 <body>
 <div id="auth" class="auth">
- <div class="authHero"><div style="font-size:42px">🥎</div><h1>Welcome</h1><div style="opacity:.82">How are you using the app today?</div><span class="prototypeTag">PROTOTYPE MODE</span></div>
- <div class="authBody" id="roleChoice">
-  <button class="roleCard" onclick="enterRole('coach')"><span class="roleIcon">📋</span><strong>Coach / Team Staff</strong><span class="muted">Manage and run your team</span></button>
-  <button class="roleCard" onclick="enterRole('family')"><span class="roleIcon">👨‍👩‍👧</span><strong>Player / Family</strong><span class="muted">Follow and participate with your team</span></button>
-  <p class="muted center tiny">No password needed while testing this prototype.</p>
+ <div class="authHero"><div style="font-size:42px">🥎</div><h1>NPlay</h1><div style="opacity:.82">Run the Dugout.</div></div>
+ <div class="authBody">
+  <div id="authForm">
+   <h2 style="margin:4px 0 6px">Sign in</h2><p class="muted">Use your NPlay account on any device.</p>
+   <label class="muted">EMAIL</label><input id="authEmail" type="email" autocomplete="email" placeholder="coach@example.com">
+   <label class="muted">PASSWORD</label><input id="authPassword" type="password" autocomplete="current-password" placeholder="At least 6 characters">
+   <div class="grid2"><button class="primary" onclick="cloudSignIn()">Sign In</button><button onclick="cloudSignUp()">Create Account</button></div>
+   <p id="authMessage" class="muted tiny" style="min-height:18px;margin-top:12px"></p>
+  </div>
+  <div id="roleChoice" style="display:none">
+   <h2>Choose your role</h2>
+   <button class="roleCard" onclick="finishRole('coach')"><span class="roleIcon">📋</span><strong>Coach / Team Staff</strong><span class="muted">Manage and run your team</span></button>
+   <button class="roleCard" onclick="finishRole('family')"><span class="roleIcon">👨‍👩‍👧</span><strong>Player / Family</strong><span class="muted">Follow and participate with your team</span></button>
+  </div>
  </div>
 </div>
 <div class="app">
@@ -191,9 +200,14 @@ const NPLAY_SUPABASE_PUBLISHABLE_KEY="sb_publishable_HhzXcH4ksl4fz9U-L_GXTA_Q8kd
 const nplayCloud=(window.supabase&&window.supabase.createClient)?window.supabase.createClient(NPLAY_SUPABASE_URL,NPLAY_SUPABASE_PUBLISHABLE_KEY):null;
 window.NPlayCloud=nplayCloud;
 let selectedRole='coach';
-function enterRole(role){selectedRole=role;localStorage.setItem('sb_role',role);applyRole(role);document.getElementById('auth').style.display='none'}
+function authMsg(message,isError=false){const e=document.getElementById('authMessage');if(e){e.textContent=message||'';e.style.color=isError?'#b42318':'var(--muted)'}}
+async function cloudSignUp(){if(!nplayCloud)return authMsg('Cloud connection unavailable. Refresh and try again.',true);const email=document.getElementById('authEmail').value.trim(),password=document.getElementById('authPassword').value;if(!email||password.length<6)return authMsg('Enter an email and a password of at least 6 characters.',true);authMsg('Creating account…');const {data,error}=await nplayCloud.auth.signUp({email,password});if(error)return authMsg(error.message,true);if(data.session){authMsg('Account created. Choose your role.');showRoleChoice()}else authMsg('Account created. Check your email to confirm it, then return and sign in.')}
+async function cloudSignIn(){if(!nplayCloud)return authMsg('Cloud connection unavailable. Refresh and try again.',true);const email=document.getElementById('authEmail').value.trim(),password=document.getElementById('authPassword').value;if(!email||!password)return authMsg('Enter your email and password.',true);authMsg('Signing in…');const {error}=await nplayCloud.auth.signInWithPassword({email,password});if(error)return authMsg(error.message,true);await afterCloudAuth()}
+function showRoleChoice(){document.getElementById('authForm').style.display='none';document.getElementById('roleChoice').style.display='block'}
+async function afterCloudAuth(){const {data}=await nplayCloud.auth.getUser();if(!data.user)return;const savedRole=localStorage.getItem('sb_role');if(savedRole){selectedRole=savedRole;applyRole(savedRole);document.getElementById('auth').style.display='none'}else showRoleChoice()}
+function finishRole(role){selectedRole=role;localStorage.setItem('sb_role',role);applyRole(role);document.getElementById('auth').style.display='none'}
 function applyRole(role){document.body.classList.toggle('family-mode',role==='family');document.getElementById('roleLabel').textContent=role==='family'?'PLAYER / FAMILY':'COACH / TEAM STAFF';titles.home=role==='family'?'Family Home':'Coach Home';document.getElementById('title').textContent=titles.home;if(role==='family'&&document.getElementById('games').classList.contains('active'))show('home')}
-function signOut(){localStorage.removeItem('sb_role');document.getElementById('auth').style.display='block';show('home')}
+async function signOut(){if(nplayCloud)await nplayCloud.auth.signOut();localStorage.removeItem('sb_role');document.getElementById('authForm').style.display='block';document.getElementById('roleChoice').style.display='none';document.getElementById('auth').style.display='block';authMsg('');show('home')}
 const base=[
 {id:1,n:'#7 Emma',pos:'SS',att:'Going'},{id:2,n:'#12 Mia',pos:'CF',att:'Going'},
 {id:3,n:'#4 Ava',pos:'C',att:'Going'},{id:4,n:'#22 Sophia',pos:'1B',att:'Going'},
@@ -361,7 +375,7 @@ function setPreset(primary,accent){applyTheme(primary,accent)}
 function saveTheme(){let primary=document.getElementById('primaryColor').value,accent=document.getElementById('accentColor').value;localStorage.setItem('sb_theme',JSON.stringify({primary,accent}));applyTheme(primary,accent);alert('Team colors saved on this device for the prototype.')}
 function resetTheme(){localStorage.removeItem('sb_theme');applyTheme('#0B2D5B','#FF5A7A')}
 let savedTheme=JSON.parse(localStorage.getItem('sb_theme')||'null');if(savedTheme)applyTheme(savedTheme.primary,savedTheme.accent);
-let savedRole=localStorage.getItem('sb_role');if(savedRole){selectedRole=savedRole;applyRole(savedRole);document.getElementById('auth').style.display='none'}
-renderRoster();renderStats();updateGame();renderChats();renderCustomEvents();setTimeout(()=>loadGameWeather(false),250);
+async function initNPlayAuth(){if(!nplayCloud){authMsg('Cloud connection unavailable. Refresh and try again.',true);return}const {data}=await nplayCloud.auth.getSession();if(data.session)await afterCloudAuth();else{document.getElementById('auth').style.display='block';document.getElementById('authForm').style.display='block';document.getElementById('roleChoice').style.display='none'}}
+renderRoster();renderStats();updateGame();renderChats();renderCustomEvents();setTimeout(()=>loadGameWeather(false),250);initNPlayAuth();
 </script>
 </body></html>
