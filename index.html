@@ -274,10 +274,20 @@ async function createCloudTeam(){
  const seasonName=(document.getElementById('newSeasonName')?.value||'').trim();
  if(!name){if(msg)msg.textContent='Enter a team name.';return}
  if(msg)msg.textContent='Creating team…';
- const {data,error}=await nplayCloud.rpc('create_team_with_head_coach',{p_name:name,p_organization_name:null,p_level:level||null,p_primary_color:'#0B2D5B',p_accent_color:'#FF5A7A'});
- if(error){if(msg)msg.textContent=error.message;return}
+ let data,error;
+ try{
+   const res=await nplayCloud.rpc('create_team_with_head_coach',{p_name:name,p_organization_name:null,p_level:level||null,p_primary_color:'#0B2D5B',p_accent_color:'#FF5A7A'});
+   data=res.data;error=res.error;
+ }catch(e){error=e}
+ if(error){if(msg){msg.textContent='Could not create team: '+(error.message||'Please sign out and back in, then try again.');msg.style.color='#b42318'}return}
  const teamId=(typeof data==='string')?data:(data?.id||data?.team_id||data);
+ currentCloudTeam=null;
  await loadCloudTeam();
+ if(!currentCloudTeam&&teamId){
+   const {data:t}=await nplayCloud.from('teams').select('id,name,primary_color,accent_color').eq('id',teamId).maybeSingle();
+   if(t){currentCloudTeam=t;setTeamNameUI(t.name)}
+ }
+ if(!currentCloudTeam){if(msg){msg.textContent='Team was created but could not be loaded. Sign out and back in.';msg.style.color='#b42318'}return}
  if(seasonName&&currentCloudTeam){
    const {data:s,error:se}=await nplayCloud.from('seasons').insert({team_id:currentCloudTeam.id,name:seasonName}).select('id,name').single();
    if(!se)currentCloudSeason=s;
