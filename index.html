@@ -246,18 +246,12 @@ function setTeamNameUI(name){
 }
 async function loadCloudTeam(){
  if(!nplayCloud)return;
- const {data:userData}=await nplayCloud.auth.getUser();const uid=userData?.user?.id;if(!uid)return;
- let {data:memberships,error}=await nplayCloud.from('team_members').select('team_id,role,status,teams(id,name,primary_color,accent_color)').eq('user_id',uid).eq('status','active').limit(1);
- if(error){console.warn('NPlay team load:',error.message)}
- if(memberships&&memberships.length){
-   const m=memberships[0];
-   const team=Array.isArray(m.teams)?m.teams[0]:m.teams;
-   if(team){currentCloudTeam=team;setTeamNameUI(team.name);await loadCloudRoster();updateCloudSetupUI();return}
-   const linked=await nplayCloud.from('teams').select('id,name,primary_color,accent_color').eq('id',m.team_id).maybeSingle();
-   if(linked.data){currentCloudTeam=linked.data;setTeamNameUI(linked.data.name);await loadCloudRoster();updateCloudSetupUI();return}
- }
- const {data:owned}=await nplayCloud.from('teams').select('id,name,primary_color,accent_color').eq('created_by',uid).limit(1);
- if(owned&&owned.length){currentCloudTeam=owned[0];setTeamNameUI(currentCloudTeam.name);await loadCloudRoster()}
+ const userRes=await nplayCloud.auth.getUser();const uid=userRes.data&&userRes.data.user&&userRes.data.user.id;if(!uid)return;
+ currentCloudTeam=null;
+ const ownedRes=await nplayCloud.from('teams').select('id,name,primary_color,accent_color').eq('created_by',uid).limit(1);
+ if(ownedRes.data&&ownedRes.data.length){currentCloudTeam=ownedRes.data[0];setTeamNameUI(currentCloudTeam.name);await loadCloudRoster();updateCloudSetupUI();return;}
+ const memberRes=await nplayCloud.from('team_members').select('team_id').eq('user_id',uid).eq('status','active').limit(1);
+ if(memberRes.data&&memberRes.data.length){const teamRes=await nplayCloud.from('teams').select('id,name,primary_color,accent_color').eq('id',memberRes.data[0].team_id).maybeSingle();if(teamRes.data){currentCloudTeam=teamRes.data;setTeamNameUI(currentCloudTeam.name);await loadCloudRoster();updateCloudSetupUI();return;}}
  updateCloudSetupUI();
 }
 let currentCloudSeason=null;
