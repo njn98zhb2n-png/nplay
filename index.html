@@ -38,7 +38,7 @@ select{width:100%;padding:13px;border:1px solid var(--line);border-radius:12px;f
   <div id="authForm">
    <h2 style="margin:4px 0 6px">Sign in</h2><p class="muted">Use your NPlay account on any device.</p>
    <label class="muted">EMAIL</label><input id="authEmail" type="email" autocomplete="email" placeholder="coach@example.com">
-   <label class="muted">PASSWORD</label><input id="authPassword" type="password" autocomplete="current-password" placeholder="At least 6 characters">
+   <label class="muted">PASSWORD</label><input id="authPassword" type="password" autocomplete="current-password" placeholder="At least 10 characters">
    <div class="grid2"><button class="primary" onclick="cloudSignIn()">Sign In</button><button onclick="cloudSignUp()">Create Account</button></div>
    <p id="authMessage" class="muted tiny" style="min-height:18px;margin-top:12px"></p>
   </div>
@@ -50,7 +50,7 @@ select{width:100%;padding:13px;border:1px solid var(--line);border-radius:12px;f
  </div>
 </div>
 <div class="app">
-<header class="top"><div class="row"><div><small>12U TIGERS • FALL 2026</small><h1 id="title">Coach Home</h1></div><button onclick="signOut()" style="padding:7px 9px;background:#ffffff22;color:white;font-size:11px">Sign Out</button></div><small id="roleLabel">COACH / TEAM STAFF</small></header>
+<header class="top"><div class="row"><div><small><span id="headerTeamName">12U TIGERS</span> • FALL 2026</small><h1 id="title">Coach Home</h1></div><button onclick="signOut()" style="padding:7px 9px;background:#ffffff22;color:white;font-size:11px">Sign Out</button></div><small id="roleLabel">COACH / TEAM STAFF</small></header>
 
 <section id="home" class="screen active">
  <div class="card heroEvent"><div class="eyebrow">TODAY • 6:30 PM</div><h2>Tigers vs Wildcats</h2><div class="muted">Riverside Sports Complex • Field 3</div><div style="margin-top:9px"><span class="pill">11/12 attending</span> <span class="badge" id="homeWeatherBadge">Weather…</span></div><div class="actionbar"><button onclick="openDirections('Riverside Sports Complex, Hamilton, OH')">📍 Directions</button><button class="primary coachOnly" onclick="startGame()">Game Day →</button><button class="primary familyOnly" onclick="show('schedule')">Event Details →</button></div></div>
@@ -118,6 +118,11 @@ select{width:100%;padding:13px;border:1px solid var(--line);border-radius:12px;f
  <button class="moreRow" onclick="toggleMore('settingsPanel')"><span><b>⚙ Settings</b><br><span class="muted">Account, permissions & team appearance</span></span><b>›</b></button>
  <div id="settingsPanel" class="card" style="display:none">
   <b>Settings</b>
+  <div class="coachOnly" style="margin-top:14px">
+   <label class="muted" for="teamNameInput">TEAM NAME</label>
+   <div class="row" style="gap:8px;margin-top:6px"><input id="teamNameInput" maxlength="60" placeholder="Team name" style="flex:1"><button class="primary" onclick="saveTeamName()">Save</button></div>
+   <div id="teamNameMessage" class="muted tiny" style="min-height:18px;margin-top:6px">Saved securely to your NPlay team.</div>
+  </div>
   <button class="moreRow coachOnly" style="margin-top:10px" onclick="toggleMore('appearancePanel')"><span><b>🎨 Team Appearance</b><br><span class="muted">Personalize the app with your team colors</span></span><b>›</b></button>
   <div id="appearancePanel" class="card coachOnly" style="display:none">
    <b>Team Colors</b><div class="muted" style="margin-top:4px">Choose a primary and accent color. Safety colors stay standardized.</div>
@@ -206,7 +211,39 @@ function authMsg(message,isError=false){const e=document.getElementById('authMes
 async function cloudSignUp(){if(!nplayCloud)return authMsg('Cloud connection unavailable. Refresh and try again.',true);const email=document.getElementById('authEmail').value.trim(),password=document.getElementById('authPassword').value;if(!email||password.length<10)return authMsg('Enter an email and a password of at least 10 characters.',true);authMsg('Creating account…');const {data,error}=await nplayCloud.auth.signUp({email,password});if(error)return authMsg(error.message,true);if(data.session){authMsg('Account created. Choose your role.');showRoleChoice()}else authMsg('Account created. Check your email to confirm it, then return and sign in.')}
 async function cloudSignIn(){if(!nplayCloud)return authMsg('Cloud connection unavailable. Refresh and try again.',true);const email=document.getElementById('authEmail').value.trim(),password=document.getElementById('authPassword').value;if(!email||!password)return authMsg('Enter your email and password.',true);authMsg('Signing in…');const {error}=await nplayCloud.auth.signInWithPassword({email,password});if(error)return authMsg(error.message,true);await afterCloudAuth()}
 function showRoleChoice(){document.getElementById('authForm').style.display='none';document.getElementById('roleChoice').style.display='block'}
-async function afterCloudAuth(){const {data}=await nplayCloud.auth.getUser();if(!data.user)return;const savedRole=localStorage.getItem('sb_role');if(savedRole){selectedRole=savedRole;applyRole(savedRole);document.getElementById('auth').style.display='none'}else showRoleChoice()}
+async function afterCloudAuth(){const {data}=await nplayCloud.auth.getUser();if(!data.user)return;await loadCloudTeam();const savedRole=localStorage.getItem('sb_role');if(savedRole){selectedRole=savedRole;applyRole(savedRole);document.getElementById('auth').style.display='none'}else showRoleChoice()}
+
+let currentCloudTeam=null;
+function setTeamNameUI(name){
+ const clean=(name||'NPlay Team').trim();
+ const h=document.getElementById('headerTeamName');if(h)h.textContent=clean.toUpperCase();
+ const i=document.getElementById('teamNameInput');if(i)i.value=clean;
+ document.title=clean+' • NPlay';
+}
+async function loadCloudTeam(){
+ if(!nplayCloud)return;
+ const {data:userData}=await nplayCloud.auth.getUser();const uid=userData?.user?.id;if(!uid)return;
+ let {data:memberships,error}=await nplayCloud.from('team_members').select('team_id,role,status,teams(id,name,primary_color,accent_color)').eq('user_id',uid).eq('status','active').limit(1);
+ if(error){console.warn('NPlay team load:',error.message);return}
+ if(memberships&&memberships.length&&memberships[0].teams){
+   currentCloudTeam=memberships[0].teams;setTeamNameUI(currentCloudTeam.name);return;
+ }
+ const {data:owned}=await nplayCloud.from('teams').select('id,name,primary_color,accent_color').eq('created_by',uid).limit(1);
+ if(owned&&owned.length){currentCloudTeam=owned[0];setTeamNameUI(currentCloudTeam.name)}
+}
+async function saveTeamName(){
+ const input=document.getElementById('teamNameInput'),msg=document.getElementById('teamNameMessage');
+ const name=(input?.value||'').trim();
+ if(!name){if(msg){msg.textContent='Enter a team name.';msg.style.color='#b42318'}return}
+ if(!currentCloudTeam){await loadCloudTeam()}
+ if(!currentCloudTeam){if(msg){msg.textContent='No NPlay team is connected to this account yet.';msg.style.color='#b42318'}return}
+ if(msg){msg.textContent='Saving…';msg.style.color='var(--muted)'}
+ const {data,error}=await nplayCloud.from('teams').update({name}).eq('id',currentCloudTeam.id).select('id,name').single();
+ if(error){if(msg){msg.textContent=error.message;msg.style.color='#b42318'}return}
+ currentCloudTeam={...currentCloudTeam,...data};setTeamNameUI(data.name);
+ if(msg){msg.textContent='Team name saved.';msg.style.color='var(--muted)'}
+}
+
 function finishRole(role){selectedRole=role;localStorage.setItem('sb_role',role);applyRole(role);document.getElementById('auth').style.display='none'}
 function applyRole(role){document.body.classList.toggle('family-mode',role==='family');document.getElementById('roleLabel').textContent=role==='family'?'PLAYER / FAMILY':'COACH / TEAM STAFF';titles.home=role==='family'?'Family Home':'Coach Home';document.getElementById('title').textContent=titles.home;if(role==='family'&&document.getElementById('games').classList.contains('active'))show('home')}
 async function signOut(){if(nplayCloud)await nplayCloud.auth.signOut();localStorage.removeItem('sb_role');document.getElementById('authForm').style.display='block';document.getElementById('roleChoice').style.display='none';document.getElementById('auth').style.display='block';authMsg('');show('home')}
