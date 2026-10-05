@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Softball Coach</title>
+<title>NPlay</title>
 <style>
 :root{--bg:#f4f6f8;--card:#fff;--ink:#101418;--muted:#66717d;--line:#dfe4e8;--primary:#0B2D5B;--accent:#FF5A7A;--danger:#b42318;--warn:#a15c00}
 *{box-sizing:border-box} body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;color:var(--ink)}
@@ -184,7 +184,12 @@ select{width:100%;padding:13px;border:1px solid var(--line);border-radius:12px;f
  <div class="grid2"><button onclick="makeSub('Position Change')">Position Change</button><button class="primary" onclick="makeSub('Substitution')">Substitute</button></div>
 </div></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+const NPLAY_SUPABASE_URL="https://uxgzgeqaudsxlleurmx.supabase.co";
+const NPLAY_SUPABASE_PUBLISHABLE_KEY="sb_publishable_HhzXcH4ksl4fz9U-L_GXTA_Q8kdfUyd";
+const nplayCloud=(window.supabase&&window.supabase.createClient)?window.supabase.createClient(NPLAY_SUPABASE_URL,NPLAY_SUPABASE_PUBLISHABLE_KEY):null;
+window.NPlayCloud=nplayCloud;
 let selectedRole='coach';
 function enterRole(role){selectedRole=role;localStorage.setItem('sb_role',role);applyRole(role);document.getElementById('auth').style.display='none'}
 function applyRole(role){document.body.classList.toggle('family-mode',role==='family');document.getElementById('roleLabel').textContent=role==='family'?'PLAYER / FAMILY':'COACH / TEAM STAFF';titles.home=role==='family'?'Family Home':'Coach Home';document.getElementById('title').textContent=titles.home;if(role==='family'&&document.getElementById('games').classList.contains('active'))show('home')}
