@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="Permissions-Policy" content="camera=(), microphone=()">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>NPlay</title>
@@ -201,7 +203,7 @@ const nplayCloud=(window.supabase&&window.supabase.createClient)?window.supabase
 window.NPlayCloud=nplayCloud;
 let selectedRole='coach';
 function authMsg(message,isError=false){const e=document.getElementById('authMessage');if(e){e.textContent=message||'';e.style.color=isError?'#b42318':'var(--muted)'}}
-async function cloudSignUp(){if(!nplayCloud)return authMsg('Cloud connection unavailable. Refresh and try again.',true);const email=document.getElementById('authEmail').value.trim(),password=document.getElementById('authPassword').value;if(!email||password.length<6)return authMsg('Enter an email and a password of at least 6 characters.',true);authMsg('Creating account…');const {data,error}=await nplayCloud.auth.signUp({email,password});if(error)return authMsg(error.message,true);if(data.session){authMsg('Account created. Choose your role.');showRoleChoice()}else authMsg('Account created. Check your email to confirm it, then return and sign in.')}
+async function cloudSignUp(){if(!nplayCloud)return authMsg('Cloud connection unavailable. Refresh and try again.',true);const email=document.getElementById('authEmail').value.trim(),password=document.getElementById('authPassword').value;if(!email||password.length<10)return authMsg('Enter an email and a password of at least 10 characters.',true);authMsg('Creating account…');const {data,error}=await nplayCloud.auth.signUp({email,password});if(error)return authMsg(error.message,true);if(data.session){authMsg('Account created. Choose your role.');showRoleChoice()}else authMsg('Account created. Check your email to confirm it, then return and sign in.')}
 async function cloudSignIn(){if(!nplayCloud)return authMsg('Cloud connection unavailable. Refresh and try again.',true);const email=document.getElementById('authEmail').value.trim(),password=document.getElementById('authPassword').value;if(!email||!password)return authMsg('Enter your email and password.',true);authMsg('Signing in…');const {error}=await nplayCloud.auth.signInWithPassword({email,password});if(error)return authMsg(error.message,true);await afterCloudAuth()}
 function showRoleChoice(){document.getElementById('authForm').style.display='none';document.getElementById('roleChoice').style.display='block'}
 async function afterCloudAuth(){const {data}=await nplayCloud.auth.getUser();if(!data.user)return;const savedRole=localStorage.getItem('sb_role');if(savedRole){selectedRole=savedRole;applyRole(savedRole);document.getElementById('auth').style.display='none'}else showRoleChoice()}
