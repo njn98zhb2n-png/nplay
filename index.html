@@ -100,6 +100,20 @@ select{width:100%;padding:13px;border:1px solid var(--line);border-radius:12px;f
 <section id="team" class="screen">
  <div class="tabs"><button id="tabRoster" class="active" onclick="teamTab('roster')">Roster</button><button id="tabChat" onclick="teamTab('chat')">Chat <span id="chatUnread" class="unread">2</span></button><button id="tabAnnouncements" onclick="teamTab('announcements')">Announcements</button></div>
  <div id="rosterPane">
+  <div id="cloudTeamSetup" class="card coachOnly" style="display:none">
+   <b>Create Your Team</b><div class="muted" style="margin-top:4px">Set up your real NPlay team. This saves securely to the cloud.</div>
+   <input id="newTeamName" maxlength="60" placeholder="Team name" style="width:100%;margin-top:12px">
+   <div class="grid2" style="margin-top:8px"><input id="newTeamLevel" maxlength="40" placeholder="Level / age (e.g. 12U)"><input id="newSeasonName" maxlength="40" placeholder="Season (e.g. Fall 2026)"></div>
+   <button class="primary" style="width:100%;margin-top:10px" onclick="createCloudTeam()">Create Team</button>
+   <div id="cloudTeamSetupMsg" class="muted tiny" style="min-height:18px;margin-top:7px"></div>
+  </div>
+  <div id="cloudRosterAdd" class="card coachOnly" style="display:none">
+   <b>Add Player</b><div class="muted" style="margin-top:4px">Players added here stay with your team when you sign back in.</div>
+   <div class="grid2" style="margin-top:10px"><input id="playerFirstName" maxlength="40" placeholder="First name"><input id="playerLastName" maxlength="40" placeholder="Last name"></div>
+   <div class="grid2" style="margin-top:8px"><input id="playerJersey" maxlength="6" placeholder="Jersey #"><input id="playerPosition" maxlength="20" placeholder="Position"></div>
+   <button class="primary" style="width:100%;margin-top:10px" onclick="addCloudPlayer()">Add Player</button>
+   <div id="cloudRosterMsg" class="muted tiny" style="min-height:18px;margin-top:7px"></div>
+  </div>
   <div class="card coachOnly"><div class="row"><div><b>Lineup</b><div class="muted">Build it or scan a card</div></div></div><div class="grid2" style="margin-top:12px"><button class="primary" onclick="openScan('ours')">📷 Scan Ours</button><button onclick="openScan('opponent')">📷 Scan Opponent</button></div><div id="lineup" class="stack" style="margin-top:14px"></div></div>
   <div class="card"><div class="row"><div><b>Roster & Attendance</b><div class="muted coachOnly">Tap status to change it</div></div><button class="coachOnly" onclick="resetRoster()">Reset</button></div><div id="roster"></div></div>
   <div class="card coachOnly"><b>Opponent Lineup</b><div id="opponentLineup" class="stack" style="margin-top:10px"><div class="muted">No opponent lineup scanned yet.</div></div></div>
@@ -236,10 +250,68 @@ async function loadCloudTeam(){
  let {data:memberships,error}=await nplayCloud.from('team_members').select('team_id,role,status,teams(id,name,primary_color,accent_color)').eq('user_id',uid).eq('status','active').limit(1);
  if(error){console.warn('NPlay team load:',error.message);return}
  if(memberships&&memberships.length&&memberships[0].teams){
-   currentCloudTeam=memberships[0].teams;setTeamNameUI(currentCloudTeam.name);return;
+   currentCloudTeam=memberships[0].teams;setTeamNameUI(currentCloudTeam.name);await loadCloudRoster();updateCloudSetupUI();return;
  }
  const {data:owned}=await nplayCloud.from('teams').select('id,name,primary_color,accent_color').eq('created_by',uid).limit(1);
- if(owned&&owned.length){currentCloudTeam=owned[0];setTeamNameUI(currentCloudTeam.name)}
+ if(owned&&owned.length){currentCloudTeam=owned[0];setTeamNameUI(currentCloudTeam.name);await loadCloudRoster()}
+ updateCloudSetupUI();
+}
+let currentCloudSeason=null;
+function updateCloudSetupUI(){
+ const setup=document.getElementById('cloudTeamSetup'),add=document.getElementById('cloudRosterAdd');
+ if(setup)setup.style.display=(!isPrototypeMode()&&!currentCloudTeam)?'block':'none';
+ if(add)add.style.display=(!isPrototypeMode()&&!!currentCloudTeam)?'block':'none';
+}
+async function createCloudTeam(){
+ const msg=document.getElementById('cloudTeamSetupMsg');
+ if(isPrototypeMode())return;
+ const name=(document.getElementById('newTeamName')?.value||'').trim();
+ const level=(document.getElementById('newTeamLevel')?.value||'').trim();
+ const seasonName=(document.getElementById('newSeasonName')?.value||'').trim();
+ if(!name){if(msg)msg.textContent='Enter a team name.';return}
+ if(msg)msg.textContent='Creating team…';
+ const {data,error}=await nplayCloud.rpc('create_team_with_head_coach',{p_name:name,p_organization_name:null,p_level:level||null,p_primary_color:'#0B2D5B',p_accent_color:'#FF5A7A'});
+ if(error){if(msg)msg.textContent=error.message;return}
+ const teamId=(typeof data==='string')?data:(data?.id||data?.team_id||data);
+ await loadCloudTeam();
+ if(seasonName&&currentCloudTeam){
+   const {data:s,error:se}=await nplayCloud.from('seasons').insert({team_id:currentCloudTeam.id,name:seasonName}).select('id,name').single();
+   if(!se)currentCloudSeason=s;
+ }
+ if(msg)msg.textContent='Team created.';
+ updateCloudSetupUI();await loadCloudRoster();
+}
+async function ensureCloudSeason(){
+ if(currentCloudSeason)return currentCloudSeason;
+ if(!currentCloudTeam)return null;
+ const {data}=await nplayCloud.from('seasons').select('id,name').eq('team_id',currentCloudTeam.id).order('created_at',{ascending:false}).limit(1);
+ if(data&&data.length)currentCloudSeason=data[0];
+ return currentCloudSeason;
+}
+async function loadCloudRoster(){
+ if(isPrototypeMode()||!currentCloudTeam)return;
+ await ensureCloudSeason();
+ const {data,error}=await nplayCloud.from('players').select('id,first_name,last_name,jersey_number,active').eq('team_id',currentCloudTeam.id).eq('active',true).order('created_at',{ascending:true});
+ if(error){console.warn('NPlay roster load:',error.message);return}
+ players=(data||[]).map(p=>({id:p.id,n:(p.jersey_number?'#'+p.jersey_number+' ':'')+p.first_name+(p.last_name?' '+p.last_name:''),pos:'Player',att:'Going',cloud:true}));
+ batting=players.slice(0,9).map(p=>p.id);
+ renderRoster();
+}
+async function addCloudPlayer(){
+ const msg=document.getElementById('cloudRosterMsg');
+ if(isPrototypeMode()||!currentCloudTeam){if(msg)msg.textContent='Sign in and create a team first.';return}
+ const first=(document.getElementById('playerFirstName')?.value||'').trim();
+ const last=(document.getElementById('playerLastName')?.value||'').trim();
+ const jersey=(document.getElementById('playerJersey')?.value||'').trim();
+ const position=(document.getElementById('playerPosition')?.value||'').trim();
+ if(!first){if(msg)msg.textContent='Enter the player’s first name.';return}
+ if(msg)msg.textContent='Adding player…';
+ const season=await ensureCloudSeason();
+ const {error}=await nplayCloud.from('players').insert({team_id:currentCloudTeam.id,season_id:season?.id||null,first_name:first,last_name:last||null,jersey_number:jersey||null});
+ if(error){if(msg)msg.textContent=error.message;return}
+ document.getElementById('playerFirstName').value='';document.getElementById('playerLastName').value='';document.getElementById('playerJersey').value='';document.getElementById('playerPosition').value='';
+ if(msg)msg.textContent='Player added.';
+ await loadCloudRoster();
 }
 async function saveTeamName(){
  const input=document.getElementById('teamNameInput'),msg=document.getElementById('teamNameMessage');
@@ -273,7 +345,7 @@ function show(id){document.querySelectorAll('.screen').forEach(x=>x.classList.re
 function renderRoster(){let el=document.getElementById('roster');el.innerHTML=players.map(p=>`<div class="player row"><div><b>${p.n}</b><div class="muted">${p.pos}</div></div><button onclick="cycleAtt(${p.id})">${p.att}</button></div>`).join('');renderLineup()}
 function cycleAtt(id){let p=players.find(x=>x.id===id), a=['Going','Maybe','Out'];p.att=a[(a.indexOf(p.att)+1)%3];save();renderRoster()}
 function resetRoster(){players=JSON.parse(JSON.stringify(base));save();renderRoster()}
-function renderLineup(){document.getElementById('lineup').innerHTML=batting.map((id,i)=>{let p=players.find(x=>x.id===id);return `<div class="row"><span><b>${i+1}. ${p.n}</b></span><span class="badge">${p.pos}</span></div>`}).join('')}
+function renderLineup(){document.getElementById('lineup').innerHTML=batting.map((id,i)=>{let p=players.find(x=>x.id===id);if(!p)return '';return `<div class="row"><span><b>${i+1}. ${p.n}</b></span><span class="badge">${p.pos}</span></div>`}).join('')}
 function current(){return players.find(x=>x.id===batting[batterIndex%batting.length])}
 function updateGame(){document.getElementById('batter').textContent=current().n;document.getElementById('count').textContent=`${balls}-${strikes}`;document.getElementById('outs').textContent=outs;document.getElementById('log').innerHTML=events.length?events.slice().reverse().slice(0,8).map(e=>`<div>${e.player}: ${e.type}</div>`).join(''):'No plays yet.'}
 function startGame(){show('games');updateGame()}
