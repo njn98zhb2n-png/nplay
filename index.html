@@ -82,6 +82,8 @@ select{width:100%;padding:13px;border:1px solid var(--line);border-radius:12px;f
   </div>
   <div class="playerSheet" id="playerSheet" onclick="if(event.target===this)closePlayerSheet()"><div class="playerSheetCard"><div class="sheetHandle"></div><div class="row"><div><h3 style="margin:0">Choose players</h3><div class="muted">Show one, several, or all schedules.</div></div><button onclick="closePlayerSheet()">Done</button></div><div id="playerSheetList" style="margin-top:10px"></div><div class="grid2" style="margin-top:14px"><button onclick="selectAllChildren()">Select All</button><button onclick="clearAllChildren()">Clear All</button></div></div></div>
  </div>
+ <div id="cloudSchedule" class="coachOnly"></div>
+ <div id="cloudGameDay" class="coachOnly"></div>
  <div class="card notice coachOnly"><div class="row"><div><b>GAME • Today • 6:30 PM</b><div class="muted">vs. Wildcats</div></div><span class="pill">11/12 Going</span></div><p><b>Riverside Sports Complex • Field 3</b></p><div class="muted">Arrive 5:45 PM • Park in the south lot and enter by the concession stand.</div><div id="scheduleWeather" class="muted" style="margin-top:10px">Weather: loading live NWS forecast…</div><div class="grid2" style="margin-top:12px"><button class="primary" onclick="openDirections('Riverside Sports Complex, Hamilton, OH')">📍 Directions</button><button onclick="show('team')">Attendance</button></div></div>
  <div class="card coachOnly"><div class="row"><div><b>PRACTICE • Tuesday • 6:00 PM</b><div class="muted">Team practice</div></div><span class="badge">PRACTICE</span></div><p><b>Joyce Park • Field 5</b></p><div class="muted">Arrive 5:45 PM • Bring hitting gear.</div><div class="grid2" style="margin-top:12px"><button class="primary" onclick="openDirections('Joyce Park, Fairfield, OH')">📍 Directions</button><button onclick="show('team')">Attendance</button></div></div>
  <div class="card coachOnly"><div class="row"><div><b>GAME • Saturday • 10:00 AM</b><div class="muted">at Thunder</div></div><span class="badge">GAME</span></div><p><b>Waterworks Park • Field 2</b></p><div class="muted">Arrive 9:15 AM • Use the north parking entrance.</div><div class="grid2" style="margin-top:12px"><button class="primary" onclick="openDirections('Waterworks Park, Fairfield, OH')">📍 Directions</button><button onclick="show('team')">Attendance</button></div></div>
@@ -303,9 +305,9 @@ async function ensureCloudSeason(){
 async function loadCloudRoster(){
  if(isPrototypeMode()||!currentCloudTeam)return;
  await ensureCloudSeason();
- const {data,error}=await nplayCloud.from('players').select('id,first_name,last_name,jersey_number,active').eq('team_id',currentCloudTeam.id).eq('active',true).order('created_at',{ascending:true});
+ const {data,error}=await nplayCloud.from('players').select('id,first_name,last_name,jersey_number,position,active').eq('team_id',currentCloudTeam.id).eq('active',true).order('created_at',{ascending:true});
  if(error){console.warn('NPlay roster load:',error.message);return}
- players=(data||[]).map(p=>({id:p.id,n:(p.jersey_number?'#'+p.jersey_number+' ':'')+p.first_name+(p.last_name?' '+p.last_name:''),pos:'Player',att:'Going',cloud:true}));
+ players=(data||[]).map(p=>({id:p.id,n:(p.jersey_number?'#'+p.jersey_number+' ':'')+p.first_name+(p.last_name?' '+p.last_name:''),pos:p.position||'Player',att:'No RSVP',cloud:true}));
  batting=players.slice(0,9).map(p=>p.id);
  renderRoster();
 }
@@ -319,12 +321,67 @@ async function addCloudPlayer(){
  if(!first){if(msg)msg.textContent='Enter the player’s first name.';return}
  if(msg)msg.textContent='Adding player…';
  const season=await ensureCloudSeason();
- const {error}=await nplayCloud.from('players').insert({team_id:currentCloudTeam.id,season_id:season?.id||null,first_name:first,last_name:last||null,jersey_number:jersey||null});
+ const {error}=await nplayCloud.from('players').insert({team_id:currentCloudTeam.id,season_id:season?.id||null,first_name:first,last_name:last||null,jersey_number:jersey||null,position:position||null});
  if(error){if(msg)msg.textContent=error.message;return}
  document.getElementById('playerFirstName').value='';document.getElementById('playerLastName').value='';document.getElementById('playerJersey').value='';document.getElementById('playerPosition').value='';
  if(msg)msg.textContent='Player added.';
  await loadCloudRoster();
 }
+
+let currentCloudEvent=null;
+async function loadCloudSchedule(){
+ if(isPrototypeMode()||!currentCloudTeam)return;
+ const box=document.getElementById('cloudSchedule'); if(!box)return;
+ const {data,error}=await nplayCloud.from('events').select('*').eq('team_id',currentCloudTeam.id).order('start_time',{ascending:true});
+ if(error){box.innerHTML='<div class="card">Schedule could not load: '+escapeHtml(error.message)+'</div>';return}
+ if(!data||!data.length){box.innerHTML='<div class="card"><b>No cloud events yet</b><div class="muted">Use + Add to create your first game or practice.</div></div>';return}
+ box.innerHTML=data.map(e=>'<div class="card"><div class="row"><div><b>'+escapeHtml((e.event_type||'event').toUpperCase())+' • '+new Date(e.start_time).toLocaleString()+'</b><div class="muted">'+escapeHtml(e.opponent?('vs. '+e.opponent):(e.notes||''))+'</div></div><button onclick="openCloudEvent(\''+e.id+'\')">Game Day</button></div></div>').join('');
+}
+async function openCloudEvent(id){
+ currentCloudEvent=id; show('schedule'); await renderCloudGameDay();
+}
+async function renderCloudGameDay(){
+ const box=document.getElementById('cloudGameDay'); if(!box||!currentCloudEvent||!currentCloudTeam)return;
+ const [rr,cc]=await Promise.all([
+  nplayCloud.from('rsvps').select('player_id,response').eq('event_id',currentCloudEvent),
+  nplayCloud.from('check_ins').select('player_id,checked_in,checked_in_at').eq('event_id',currentCloudEvent)
+ ]);
+ const rmap=Object.fromEntries((rr.data||[]).map(x=>[x.player_id,x.response]));
+ const cmap=Object.fromEntries((cc.data||[]).map(x=>[x.player_id,x.checked_in]));
+ const here=players.filter(p=>cmap[p.id]).length;
+ box.innerHTML='<div class="card"><div class="row"><div><b>Game Day</b><div class="muted">'+here+' of '+players.length+' Here</div></div><button class="primary" onclick="publishCloudLineup()">Publish Lineup</button></div><div style="margin-top:10px">'+players.map(p=>'<div class="player row"><div><b>'+escapeHtml(p.n)+'</b><div class="muted">'+escapeHtml(p.pos)+' • RSVP: '+escapeHtml(rmap[p.id]||'No response')+'</div></div><div><button onclick="setCloudRsvp(\''+p.id+'\',\'going\')">Going</button> <button class="'+(cmap[p.id]?'primary':'')+'" onclick="toggleCloudCheckIn(\''+p.id+'\','+!!cmap[p.id]+')">'+(cmap[p.id]?'✓ Checked In':'CHECK IN')+'</button></div></div>').join('')+'</div></div>';
+}
+async function setCloudRsvp(playerId,response){
+ const u=await nplayCloud.auth.getUser(); const uid=u.data?.user?.id;
+ const old=await nplayCloud.from('rsvps').select('id').eq('event_id',currentCloudEvent).eq('player_id',playerId).maybeSingle();
+ if(old.data)await nplayCloud.from('rsvps').update({response,responded_by:uid,updated_at:new Date().toISOString()}).eq('id',old.data.id);
+ else await nplayCloud.from('rsvps').insert({event_id:currentCloudEvent,player_id:playerId,response,responded_by:uid});
+ await renderCloudGameDay();
+}
+async function toggleCloudCheckIn(playerId,isIn){
+ const u=await nplayCloud.auth.getUser(); const uid=u.data?.user?.id;
+ const old=await nplayCloud.from('check_ins').select('id').eq('event_id',currentCloudEvent).eq('player_id',playerId).maybeSingle();
+ const row={checked_in:!isIn,checked_in_at:!isIn?new Date().toISOString():null,checked_in_by:uid,method:'manual'};
+ if(old.data)await nplayCloud.from('check_ins').update(row).eq('id',old.data.id);
+ else await nplayCloud.from('check_ins').insert({...row,event_id:currentCloudEvent,player_id:playerId});
+ await renderCloudGameDay();
+}
+async function publishCloudLineup(){
+ if(!currentCloudEvent)return;
+ const u=await nplayCloud.auth.getUser(); const uid=u.data?.user?.id;
+ let q=await nplayCloud.from('lineups').select('id').eq('event_id',currentCloudEvent).maybeSingle();
+ let lineupId=q.data?.id;
+ if(lineupId)await nplayCloud.from('lineups').update({status:'published',published_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',lineupId);
+ else {const ins=await nplayCloud.from('lineups').insert({event_id:currentCloudEvent,status:'published',published_at:new Date().toISOString(),created_by:uid}).select('id').single();lineupId=ins.data?.id}
+ if(lineupId){
+  await nplayCloud.from('lineup_players').delete().eq('lineup_id',lineupId);
+  const rows=batting.map((pid,i)=>({lineup_id:lineupId,player_id:pid,batting_order:i+1,starting_position:players.find(p=>p.id===pid)?.pos||null,is_starting:true}));
+  if(rows.length)await nplayCloud.from('lineup_players').insert(rows);
+  alert('Lineup published. Last updated '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}));
+ }
+}
+function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+
 async function saveTeamName(){
  const input=document.getElementById('teamNameInput'),msg=document.getElementById('teamNameMessage');
  if(isPrototypeMode()){if(msg){msg.textContent='Prototype Mode uses sample data. Sign in to save a real team name.';msg.style.color='var(--muted)'}return}
@@ -353,7 +410,7 @@ let players=JSON.parse(localStorage.getItem('sb_players')||JSON.stringify(base))
 let batting=[1,2,3,4,5,6,7,8,9], opponentBatting=[], scanMode='ours', events=[], balls=0,strikes=0,outs=0,batterIndex=0;
 const titles={home:'Coach Home',schedule:'Schedule',games:'Game Day',team:'Team',more:'More'};
 function save(){localStorage.setItem('sb_players',JSON.stringify(players))}
-function show(id){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.getElementById('title').textContent=titles[id];document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.s===id));if(id==='team'){updateCloudSetupUI();if(!isPrototypeMode()&&currentCloudTeam)loadCloudRoster()}if(id==='schedule'&&selectedRole==='family')renderFamilySchedule();if(id==='stats')renderStats()}
+function show(id){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.getElementById('title').textContent=titles[id];document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.s===id));if(id==='team'){updateCloudSetupUI();if(!isPrototypeMode()&&currentCloudTeam)loadCloudRoster()}if(id==='schedule'){if(selectedRole==='family')renderFamilySchedule();if(!isPrototypeMode()&&currentCloudTeam){loadCloudRoster().then(loadCloudSchedule)}}if(id==='stats')renderStats()}
 function renderRoster(){let el=document.getElementById('roster');el.innerHTML=players.map(p=>`<div class="player row"><div><b>${p.n}</b><div class="muted">${p.pos}</div></div><button onclick="cycleAtt(${p.id})">${p.att}</button></div>`).join('');renderLineup()}
 function cycleAtt(id){let p=players.find(x=>x.id===id), a=['Going','Maybe','Out'];p.att=a[(a.indexOf(p.att)+1)%3];save();renderRoster()}
 function resetRoster(){players=JSON.parse(JSON.stringify(base));save();renderRoster()}
