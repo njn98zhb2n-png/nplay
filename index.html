@@ -39,7 +39,7 @@ select{width:100%;padding:13px;border:1px solid var(--line);border-radius:12px;f
    <h2 style="margin:4px 0 6px">Sign in</h2><p class="muted">Use your NPlay account on any device.</p>
    <label class="muted">EMAIL</label><input id="authEmail" type="email" autocomplete="email" placeholder="coach@example.com">
    <label class="muted">PASSWORD</label><input id="authPassword" type="password" autocomplete="current-password" placeholder="At least 10 characters">
-   <div class="grid2"><button class="primary" onclick="cloudSignIn()">Sign In</button><button onclick="cloudSignUp()">Create Account</button></div>
+   <div class="grid2"><button class="primary" onclick="cloudSignIn()">Sign In</button><button onclick="cloudSignUp()">Create Account</button></div><button style="width:100%;margin-top:10px" onclick="enterPrototypeMode()">Continue in Prototype Mode</button><div class="muted tiny" style="margin-top:6px;text-align:center">Uses sample data only. Cloud team data stays protected.</div>
    <p id="authMessage" class="muted tiny" style="min-height:18px;margin-top:12px"></p>
   </div>
   <div id="roleChoice" style="display:none">
@@ -210,6 +210,15 @@ let selectedRole='coach';
 function authMsg(message,isError=false){const e=document.getElementById('authMessage');if(e){e.textContent=message||'';e.style.color=isError?'#b42318':'var(--muted)'}}
 async function cloudSignUp(){if(!nplayCloud)return authMsg('Cloud connection unavailable. Refresh and try again.',true);const email=document.getElementById('authEmail').value.trim(),password=document.getElementById('authPassword').value;if(!email||password.length<10)return authMsg('Enter an email and a password of at least 10 characters.',true);authMsg('Creating account…');const {data,error}=await nplayCloud.auth.signUp({email,password});if(error)return authMsg(error.message,true);if(data.session){authMsg('Account created. Choose your role.');showRoleChoice()}else authMsg('Account created. Check your email to confirm it, then return and sign in.')}
 async function cloudSignIn(){if(!nplayCloud)return authMsg('Cloud connection unavailable. Refresh and try again.',true);const email=document.getElementById('authEmail').value.trim(),password=document.getElementById('authPassword').value;if(!email||!password)return authMsg('Enter your email and password.',true);authMsg('Signing in…');const {error}=await nplayCloud.auth.signInWithPassword({email,password});if(error)return authMsg(error.message,true);await afterCloudAuth()}
+function enterPrototypeMode(){
+ currentCloudTeam=null;
+ sessionStorage.setItem('nplay_prototype_mode','1');
+ selectedRole='coach';
+ applyRole('coach');
+ setTeamNameUI('12U Tigers');
+ document.getElementById('auth').style.display='none';
+}
+function isPrototypeMode(){return sessionStorage.getItem('nplay_prototype_mode')==='1'}
 function showRoleChoice(){document.getElementById('authForm').style.display='none';document.getElementById('roleChoice').style.display='block'}
 async function afterCloudAuth(){const {data}=await nplayCloud.auth.getUser();if(!data.user)return;await loadCloudTeam();const savedRole=localStorage.getItem('sb_role');if(savedRole){selectedRole=savedRole;applyRole(savedRole);document.getElementById('auth').style.display='none'}else showRoleChoice()}
 
@@ -233,6 +242,7 @@ async function loadCloudTeam(){
 }
 async function saveTeamName(){
  const input=document.getElementById('teamNameInput'),msg=document.getElementById('teamNameMessage');
+ if(isPrototypeMode()){if(msg){msg.textContent='Prototype Mode uses sample data. Sign in to save a real team name.';msg.style.color='var(--muted)'}return}
  const name=(input?.value||'').trim();
  if(!name){if(msg){msg.textContent='Enter a team name.';msg.style.color='#b42318'}return}
  if(!currentCloudTeam){await loadCloudTeam()}
@@ -246,7 +256,7 @@ async function saveTeamName(){
 
 function finishRole(role){selectedRole=role;localStorage.setItem('sb_role',role);applyRole(role);document.getElementById('auth').style.display='none'}
 function applyRole(role){document.body.classList.toggle('family-mode',role==='family');document.getElementById('roleLabel').textContent=role==='family'?'PLAYER / FAMILY':'COACH / TEAM STAFF';titles.home=role==='family'?'Family Home':'Coach Home';document.getElementById('title').textContent=titles.home;if(role==='family'&&document.getElementById('games').classList.contains('active'))show('home')}
-async function signOut(){if(nplayCloud)await nplayCloud.auth.signOut();localStorage.removeItem('sb_role');document.getElementById('authForm').style.display='block';document.getElementById('roleChoice').style.display='none';document.getElementById('auth').style.display='block';authMsg('');show('home')}
+async function signOut(){if(nplayCloud&&!isPrototypeMode())await nplayCloud.auth.signOut();sessionStorage.removeItem('nplay_prototype_mode');localStorage.removeItem('sb_role');currentCloudTeam=null;document.getElementById('authForm').style.display='block';document.getElementById('roleChoice').style.display='none';document.getElementById('auth').style.display='block';authMsg('');show('home')}
 const base=[
 {id:1,n:'#7 Emma',pos:'SS',att:'Going'},{id:2,n:'#12 Mia',pos:'CF',att:'Going'},
 {id:3,n:'#4 Ava',pos:'C',att:'Going'},{id:4,n:'#22 Sophia',pos:'1B',att:'Going'},
