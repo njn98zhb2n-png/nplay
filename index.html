@@ -202,10 +202,10 @@ select{width:100%;padding:13px;border:1px solid var(--line);border-radius:12px;f
 
 <div id="scanModal" class="modal"><div class="sheet">
  <div class="row"><h2 style="margin:0" id="scanTitle">Scan Lineup</h2><button onclick="closeScan()">Close</button></div>
- <p class="muted">Take a photo of a handwritten or printed lineup card. The production version will use image recognition to read names, jersey numbers, batting order and positions, then ask you to review anything uncertain before confirming.</p>
+ <p class="muted">Take a photo of a handwritten or printed lineup card. Take a clear, straight-on photo. NPlay will attempt to read the names, numbers and positions. Review and correct every row before confirming.</p>
  <input id="lineupPhoto" type="file" accept="image/*" capture="environment" style="display:none" onchange="photoChosen(event)">
  <button class="primary" style="width:100%;margin:8px 0" onclick="document.getElementById('lineupPhoto').click()">📷 Take or Choose Photo</button>
- <div id="scanPreview" class="card" style="display:none;margin-top:12px"><img id="scanImage" alt="Lineup photo preview" style="width:100%;max-height:220px;object-fit:contain;border-radius:12px"><p class="muted">Photo captured. OCR/AI recognition is not connected in this prototype yet. Below is a simulated review so you can test the workflow.</p><button onclick="simulateScan()">Generate Review</button></div>
+ <div id="scanPreview" class="card" style="display:none;margin-top:12px"><img id="scanImage" alt="Lineup photo preview" style="width:100%;max-height:220px;object-fit:contain;border-radius:12px"><p class="muted">Review the photo, then read the lineup. Handwriting recognition may be imperfect.</p><button id="scanReadButton" onclick="simulateScan()">Read Lineup From Photo</button><p id="scanStatus" class="muted" aria-live="polite"></p></div>
  <div id="scanReview" style="display:none"><h3>Review before confirming</h3><div id="scanRows" class="stack"></div><p class="muted">⚠ Always verify the generated lineup before game use.</p><button class="primary" style="width:100%" onclick="confirmScan()">Confirm Lineup</button></div>
 </div></div>
 
@@ -457,12 +457,85 @@ function openSub(){let out=document.getElementById('outSel'),inn=document.getEle
 function closeSub(){document.getElementById('subModal').classList.remove('show')}
 function makeSub(kind){let oid=+document.getElementById('outSel').value,nid=+document.getElementById('inSel').value;if(!nid){alert('No available bench player.');return}let i=batting.indexOf(oid),a=players.find(x=>x.id===oid),b=players.find(x=>x.id===nid);batting[i]=nid;events.push({player:'Lineup',type:`${kind}: ${b.n} for ${a.n}`});closeSub();renderLineup();updateGame()}
 
-function openScan(mode){scanMode=mode;document.getElementById('scanTitle').textContent=mode==='ours'?'Scan Our Lineup':'Scan Opponent Lineup';document.getElementById('scanPreview').style.display='none';document.getElementById('scanReview').style.display='none';document.getElementById('scanModal').classList.add('show')}
+let scanExtractedRows=[];
+function openScan(mode){
+ scanMode=mode;scanExtractedRows=[];
+ document.getElementById('scanTitle').textContent=mode==='ours'?'Scan Our Lineup':'Scan Opponent Lineup';
+ document.getElementById('scanPreview').style.display='none';
+ document.getElementById('scanReview').style.display='none';
+ document.getElementById('scanStatus').textContent='';
+ document.getElementById('lineupPhoto').value='';
+ document.getElementById('scanModal').classList.add('show');
+}
 function closeScan(){document.getElementById('scanModal').classList.remove('show')}
-function photoChosen(e){let f=e.target.files&&e.target.files[0];if(!f)return;document.getElementById('scanImage').src=URL.createObjectURL(f);document.getElementById('scanPreview').style.display='block';document.getElementById('scanReview').style.display='none'}
-function simulateScan(){let rows=scanMode==='ours'?players.slice(0,9).map((p,i)=>`${i+1}. ${p.n} — ${p.pos}`):['1. #8 Riley — CF','2. #21 Madison — SS','3. #5 Avery — C','4. #17 Peyton — 1B','5. #10 Taylor — 3B','6. #2 Kennedy — P','7. #14 Reagan — LF','8. #6 Quinn — 2B','9. #11 Skylar — RF'];document.getElementById('scanRows').innerHTML=rows.map((r,i)=>`<div class="row player"><span>${r}</span><span class="pill">${i===2?'CHECK':'MATCH'}</span></div>`).join('');document.getElementById('scanReview').style.display='block'}
-function confirmScan(){if(scanMode==='ours'){batting=players.slice(0,9).map(p=>p.id);renderLineup()}else{opponentBatting=['#8 Riley — CF','#21 Madison — SS','#5 Avery — C','#17 Peyton — 1B','#10 Taylor — 3B','#2 Kennedy — P','#14 Reagan — LF','#6 Quinn — 2B','#11 Skylar — RF'];document.getElementById('opponentLineup').innerHTML=opponentBatting.map((x,i)=>`<div class="row"><b>${i+1}. ${x}</b></div>`).join('')}closeScan();alert('Lineup confirmed. In the full version, this will be generated from the actual photo after coach review.')}
-
+function photoChosen(e){
+ const f=e.target.files&&e.target.files[0];if(!f)return;
+ const img=document.getElementById('scanImage');
+ if(img.dataset.objectUrl)URL.revokeObjectURL(img.dataset.objectUrl);
+ img.dataset.objectUrl=URL.createObjectURL(f);img.src=img.dataset.objectUrl;
+ document.getElementById('scanPreview').style.display='block';
+ document.getElementById('scanReview').style.display='none';
+ document.getElementById('scanStatus').textContent='Photo ready. Tap Read Lineup.';
+}
+function loadLineupOCR(){
+ return new Promise((resolve,reject)=>{
+  if(window.Tesseract)return resolve();
+  const script=document.createElement('script');
+  script.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+  script.onload=()=>window.Tesseract?resolve():reject(new Error('Text reader unavailable'));
+  script.onerror=()=>reject(new Error('Could not load text reader. Check your internet connection.'));
+  document.head.appendChild(script);
+ });
+}
+function parseLineupText(raw){
+ const lines=raw.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+ return lines.map(line=>{
+  const cleaned=line.replace(/^[\s|]*(?:\d{1,2}[.)-]\s*|#\s*)/,'').trim();
+  const match=cleaned.match(/^(?:#?\s*(\d{1,3})\s+)?(.+?)(?:\s+[-–—,]\s*|\s{2,})(P|C|1B|2B|3B|SS|LF|CF|RF|OF|DP|DH|UTIL)\s*$/i);
+  if(match)return {number:match[1]||'',name:match[2].trim(),position:(match[3]||'').toUpperCase()};
+  const number=cleaned.match(/^#?(\d{1,3})\s+(.+)$/);
+  return {number:number?number[1]:'',name:number?number[2]:cleaned,position:''};
+ }).filter(r=>r.name&&/[a-z]/i.test(r.name)).slice(0,25);
+}
+function renderScanReview(){
+ const host=document.getElementById('scanRows');
+ host.innerHTML=scanExtractedRows.map((r,i)=>'<div class="card" style="padding:10px;margin-bottom:8px"><b>Batting '+(i+1)+'</b><div class="grid2" style="margin-top:6px"><input aria-label="Player name" placeholder="Player name" value="'+escapeHtml(r.name).replace(/"/g,'&quot;')+'" oninput="scanExtractedRows['+i+'].name=this.value"><input aria-label="Jersey number" placeholder="Jersey #" value="'+escapeHtml(r.number)+'" oninput="scanExtractedRows['+i+'].number=this.value"></div><input aria-label="Position" style="margin-top:6px;width:100%" placeholder="Position (SS, CF, etc.)" value="'+escapeHtml(r.position)+'" oninput="scanExtractedRows['+i+'].position=this.value"></div>').join('');
+ document.getElementById('scanReview').style.display='block';
+}
+async function simulateScan(){
+ const f=document.getElementById('lineupPhoto').files[0];
+ const status=document.getElementById('scanStatus'),button=document.getElementById('scanReadButton');
+ if(!f){status.textContent='Choose a lineup photo first.';return}
+ button.disabled=true;status.textContent='Reading photo. This can take a moment…';
+ try{
+  await loadLineupOCR();
+  const result=await window.Tesseract.recognize(f,'eng');
+  scanExtractedRows=parseLineupText(result.data.text||'');
+  if(!scanExtractedRows.length){status.textContent='No readable player names found. Try a clearer, straight-on photo.';return}
+  status.textContent='Found '+scanExtractedRows.length+' possible rows. Correct names, numbers and positions before confirming.';
+  renderScanReview();
+ }catch(err){status.textContent='Could not read photo: '+(err.message||err)}
+ finally{button.disabled=false}
+}
+function confirmScan(){
+ const rows=scanExtractedRows.map(r=>({name:r.name.trim(),number:r.number.trim(),position:r.position.trim().toUpperCase()})).filter(r=>r.name);
+ if(!rows.length){alert('No players to confirm. Read a photo first.');return}
+ if(scanMode==='ours'){
+  const matched=[],missing=[];
+  rows.forEach(r=>{
+   const clean=x=>String(x||'').replace(/^#\d+\s*/,'').trim().toLowerCase();
+   const found=players.find(p=>(r.number&&String(p.n).match(/^#(\d+)/)?.[1]===r.number)||clean(p.n)===clean(r.name));
+   if(found&&!matched.includes(found.id))matched.push(found.id);
+   else missing.push(r.name);
+  });
+  if(missing.length){alert('These players are not in the current roster: '+missing.join(', ')+'. Add or correct them before confirming.');return}
+  batting=matched;renderLineup();
+ }else{
+  opponentBatting=rows.map(r=>(r.number?'#'+r.number+' ':'')+r.name+(r.position?' — '+r.position:''));
+  document.getElementById('opponentLineup').innerHTML=opponentBatting.map((x,i)=>'<div class="row"><b>'+(i+1)+'. '+escapeHtml(x)+'</b></div>').join('');
+ }
+ closeScan();alert('Reviewed lineup applied. Check it before game use.');
+}
 
 const defaultTeamChat=[{name:'Coach',text:'Reminder: please update attendance before 3 PM.',time:'2:08 PM',me:true},{name:"Emma's Parent",text:'Emma is good to go tonight.',time:'2:14 PM'},{name:"Mia's Parent",text:'We may be about 10 minutes late.',time:'2:19 PM'}];
 const defaultGameChat=[{name:'Coach',text:'We are on Field 3 tonight.',time:'4:45 PM',me:true},{name:"Emma's Parent",text:'We’ll be there by 5:40.',time:'4:48 PM'}];
