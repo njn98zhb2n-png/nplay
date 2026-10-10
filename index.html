@@ -536,20 +536,21 @@ async function prepareLineupImage(file){
 async function readLineupPositionColumn(file,expectedCount){
  const url=URL.createObjectURL(file);
  try{
-  const img=new Image();
-  await new Promise((ok,fail)=>{img.onload=ok;img.onerror=fail;img.src=url});
+  const img=new Image();await new Promise((ok,fail)=>{img.onload=ok;img.onerror=fail;img.src=url});
   const w=img.naturalWidth,h=img.naturalHeight;
-  // On tall phone screenshots the defensive positions form a narrow column to the right.
   if(h/w<1.4)return [];
-  const x=Math.floor(w*.78),y=Math.floor(h*.30),sw=Math.floor(w*.14),sh=Math.floor(h*.52);
-  const canvas=document.createElement('canvas'),scale=Math.max(3,900/sw);
+  // Extract the actual position letters, excluding the drag handles at the far right.
+  const x=Math.floor(w*.81),y=Math.floor(h*.315),sw=Math.floor(w*.075),sh=Math.floor(h*.505);
+  const canvas=document.createElement('canvas'),scale=Math.max(4,650/sw);
   canvas.width=Math.floor(sw*scale);canvas.height=Math.floor(sh*scale);
   const ctx=canvas.getContext('2d');
   ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
   ctx.drawImage(img,x,y,sw,sh,0,0,canvas.width,canvas.height);
-  const result=await window.Tesseract.recognize(canvas,'eng',{tessedit_pageseg_mode:'6'});
-  const codes=(result.data.text||'').split(/\r?\n/).map(x=>x.trim().toUpperCase().replace(/[^A-Z0-9]/g,'')).filter(x=>/^(P|C|1B|2B|3B|SS|LF|CF|RF|OF|DP|DH|EH|UTIL)$/.test(x));
-  document.getElementById('scanRawText').textContent+='\n--- POSITION COLUMN ---\n'+(result.data.text||'(No positions detected)');
+  const result=await window.Tesseract.recognize(canvas,'eng',{tessedit_pageseg_mode:'11'});
+  const raw=result.data.text||'';
+  const codes=raw.split(/\r?\n/).map(x=>x.trim().toUpperCase().replace(/[^A-Z0-9]/g,'')).filter(x=>/^(P|C|1B|2B|3B|SS|LF|CF|RF|OF|DP|DH|EH|UTIL)$/.test(x));
+  document.getElementById('scanRawText').textContent+='\n--- POSITION COLUMN ---\n'+(raw||'(No positions detected)')+'\nRecognized '+codes.length+' of '+expectedCount+' expected positions.';
+  // Never shift positions by assigning an incomplete list in sequence.
   return codes.length===expectedCount?codes:[];
  }finally{URL.revokeObjectURL(url)}
 }
