@@ -204,7 +204,8 @@ select{width:100%;padding:13px;border:1px solid var(--line);border-radius:12px;f
  <div class="row"><h2 style="margin:0" id="scanTitle">Scan Lineup</h2><button onclick="closeScan()">Close</button></div>
  <p class="muted">Take a photo of a handwritten or printed lineup card. Take a clear, straight-on photo. NPlay will attempt to read the names, numbers and positions. Review and correct every row before confirming.</p>
  <input id="lineupPhoto" type="file" accept="image/*" capture="environment" style="display:none" onchange="photoChosen(event)">
- <button class="primary" style="width:100%;margin:8px 0" onclick="document.getElementById('lineupPhoto').click()">📷 Take or Choose Photo</button>
+ <input id="lineupGallery" type="file" accept="image/*" style="display:none" onchange="photoChosen(event)">
+ <div class="grid2" style="margin:8px 0"><button class="primary" onclick="document.getElementById('lineupPhoto').click()">📷 Take Photo</button><button onclick="document.getElementById('lineupGallery').click()">🖼 Choose From Gallery</button></div>
  <div id="scanPreview" class="card" style="display:none;margin-top:12px"><img id="scanImage" alt="Lineup photo preview" style="width:100%;max-height:220px;object-fit:contain;border-radius:12px"><p class="muted">Review the photo, then read the lineup. Handwriting recognition may be imperfect.</p><button id="scanReadButton" onclick="simulateScan()">Read Lineup From Photo</button><p id="scanStatus" class="muted" aria-live="polite"></p></div>
  <div id="scanReview" style="display:none"><h3>Review before confirming</h3><div id="scanRows" class="stack"></div><p class="muted">⚠ Always verify the generated lineup before game use.</p><button class="primary" style="width:100%" onclick="confirmScan()">Confirm Lineup</button></div>
 </div></div>
@@ -464,12 +465,13 @@ function openScan(mode){
  document.getElementById('scanPreview').style.display='none';
  document.getElementById('scanReview').style.display='none';
  document.getElementById('scanStatus').textContent='';
- document.getElementById('lineupPhoto').value='';
+ document.getElementById('lineupPhoto').value='';document.getElementById('lineupGallery').value='';
  document.getElementById('scanModal').classList.add('show');
 }
 function closeScan(){document.getElementById('scanModal').classList.remove('show')}
 function photoChosen(e){
  const f=e.target.files&&e.target.files[0];if(!f)return;
+ const other=document.getElementById(e.target.id==='lineupPhoto'?'lineupGallery':'lineupPhoto');other.value='';
  const img=document.getElementById('scanImage');
  if(img.dataset.objectUrl)URL.revokeObjectURL(img.dataset.objectUrl);
  img.dataset.objectUrl=URL.createObjectURL(f);img.src=img.dataset.objectUrl;
@@ -503,7 +505,7 @@ function renderScanReview(){
  document.getElementById('scanReview').style.display='block';
 }
 async function simulateScan(){
- const f=document.getElementById('lineupPhoto').files[0];
+ const f=document.getElementById('lineupGallery').files[0]||document.getElementById('lineupPhoto').files[0];
  const status=document.getElementById('scanStatus'),button=document.getElementById('scanReadButton');
  if(!f){status.textContent='Choose a lineup photo first.';return}
  button.disabled=true;status.textContent='Reading photo. This can take a moment…';
