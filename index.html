@@ -599,24 +599,52 @@ async function simulateScan(){
   renderScanReview();
  }finally{button.disabled=false}
 }
-function confirmScan(){
- const rows=scanExtractedRows.map(r=>({name:r.name.trim(),number:r.number.trim(),position:r.position.trim().toUpperCase()})).filter(r=>r.name);
+async function confirmScan(){
+ const rows=scanExtractedRows.map(r=>({name:r.name.trim(),number:String(r.number||'').trim().replace(/^#/,'').trim(),position:r.position.trim().toUpperCase()})).filter(r=>r.name);
  if(!rows.length){alert('No players to confirm. Read a photo first.');return}
  if(scanMode==='ours'){
-  const matched=[],missing=[];
-  rows.forEach(r=>{
-   const clean=x=>String(x||'').replace(/^#\d+\s*/,'').trim().toLowerCase();
-   const found=players.find(p=>(r.number&&String(p.n).match(/^#(\d+)/)?.[1]===r.number)||clean(p.n)===clean(r.name));
-   if(found&&!matched.includes(found.id))matched.push(found.id);
-   else missing.push(r.name);
-  });
-  if(missing.length){alert('These players are not in the current roster: '+missing.join(', ')+'. Add or correct them before confirming.');return}
-  batting=matched;renderLineup();
+  const normalize=x=>String(x||'').replace(/^#\d+\s*/,'').trim().toLowerCase().replace(/\s+/g,' ');
+  const seen=new Set(),resolved=[],toCreate=[];
+  for(const row of rows){
+   // Never match on jersey number alone: different players can share #17.
+   const found=players.find(p=>!seen.has(p.id)&&normalize(p.n)===normalize(row.name));
+   if(found){seen.add(found.id);resolved.push({row,player:found})}
+   else toCreate.push(row);
+  }
+  if(toCreate.length&&!confirm('Add '+toCreate.length+' scanned players to this team roster?\n'+toCreate.map(r=>r.name).join(', ')))return;
+  if(!isPrototypeMode()&&currentCloudTeam&&nplayCloud){
+   if(toCreate.length){
+    const season=await ensureCloudSeason();
+    const payload=toCreate.map(r=>{
+     const parts=r.name.split(/\s+/);
+     return {team_id:currentCloudTeam.id,season_id:season?.id||null,first_name:parts.shift(),last_name:parts.join(' ')||null,jersey_number:r.number||null,position:r.position||null};
+    });
+    const {data,error}=await nplayCloud.from('players').insert(payload).select('id,first_name,last_name,jersey_number,position');
+    if(error){alert('Could not add missing roster players: '+error.message);return}
+    (data||[]).forEach(p=>players.push({id:p.id,n:(p.jersey_number?'#'+p.jersey_number+' ':'')+p.first_name+(p.last_name?' '+p.last_name:''),pos:p.position||'Player',att:'No RSVP',cloud:true}));
+   }
+  }else{
+   for(const row of toCreate){
+    const id=Math.max(0,...players.map(p=>typeof p.id==='number'?p.id:0))+1;
+    players.push({id,n:(row.number?'#'+row.number+' ':'')+row.name,pos:row.position||'Player',att:'Going'});
+   }
+   save();
+  }
+  // Apply scanned positions to matched players and preserve the exact scanned order.
+  batting=[];
+  for(const row of rows){
+   const found=players.find(p=>!batting.includes(p.id)&&normalize(p.n)===normalize(row.name));
+   if(!found){alert('Could not match '+row.name+' after import.');return}
+   if(row.position)found.pos=row.position;
+   batting.push(found.id);
+  }
+  if(isPrototypeMode()||!currentCloudTeam)save();
+  renderRoster();
  }else{
   opponentBatting=rows.map(r=>(r.number?'#'+r.number+' ':'')+r.name+(r.position?' — '+r.position:''));
   document.getElementById('opponentLineup').innerHTML=opponentBatting.map((x,i)=>'<div class="row"><b>'+(i+1)+'. '+escapeHtml(x)+'</b></div>').join('');
  }
- closeScan();alert('Reviewed lineup applied. Check it before game use.');
+ closeScan();alert('Lineup applied. Review it before game use.');
 }
 
 const defaultTeamChat=[{name:'Coach',text:'Reminder: please update attendance before 3 PM.',time:'2:08 PM',me:true},{name:"Emma's Parent",text:'Emma is good to go tonight.',time:'2:14 PM'},{name:"Mia's Parent",text:'We may be about 10 minutes late.',time:'2:19 PM'}];
