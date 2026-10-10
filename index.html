@@ -207,7 +207,7 @@ select{width:100%;padding:13px;border:1px solid var(--line);border-radius:12px;f
  <input id="lineupGallery" type="file" accept="image/*" style="display:none" onchange="photoChosen(event)">
  <div class="grid2" style="margin:8px 0"><button class="primary" onclick="document.getElementById('lineupPhoto').click()">📷 Take Photo</button><button onclick="document.getElementById('lineupGallery').click()">🖼 Choose From Gallery</button></div>
  <div id="scanPreview" class="card" style="display:none;margin-top:12px"><img id="scanImage" alt="Lineup photo preview" style="width:100%;max-height:220px;object-fit:contain;border-radius:12px"><p class="muted">Review the photo, then read the lineup. Handwriting recognition may be imperfect.</p><button id="scanReadButton" onclick="simulateScan()">Read Lineup From Photo</button><p id="scanStatus" class="muted" aria-live="polite"></p></div>
- <div id="scanReview" style="display:none"><h3>Review before confirming</h3><div id="scanRows" class="stack"></div><p class="muted">⚠ Always verify the generated lineup before game use.</p><button class="primary" style="width:100%" onclick="confirmScan()">Confirm Lineup</button></div>
+ <div id="scanReview" style="display:none"><h3>Review before confirming</h3><div id="scanRows" class="stack"></div><button onclick="addScanRow()" style="margin:10px 0">+ Add Player Row</button><details><summary>Scanner diagnostic text</summary><pre id="scanRawText" style="white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px"></pre></details><p class="muted">⚠ Always verify the generated lineup before game use.</p><button class="primary" style="width:100%" onclick="confirmScan()">Confirm Lineup</button></div>
 </div></div>
 
 <div id="subModal" class="modal" onclick="if(event.target===this)closeSub()"><div class="sheet">
@@ -464,7 +464,7 @@ function openScan(mode){
  document.getElementById('scanTitle').textContent=mode==='ours'?'Scan Our Lineup':'Scan Opponent Lineup';
  document.getElementById('scanPreview').style.display='none';
  document.getElementById('scanReview').style.display='none';
- document.getElementById('scanStatus').textContent='';
+ document.getElementById('scanStatus').textContent='';document.getElementById('scanRawText').textContent='';
  document.getElementById('lineupPhoto').value='';document.getElementById('lineupGallery').value='';
  document.getElementById('scanModal').classList.add('show');
 }
@@ -538,6 +538,11 @@ function renderScanReview(){
  host.innerHTML=scanExtractedRows.map((r,i)=>'<div class="card" style="padding:10px;margin-bottom:8px"><b>Batting '+(i+1)+'</b><div class="grid2" style="margin-top:6px"><input aria-label="Player name" placeholder="Player name" value="'+escapeHtml(r.name).replace(/"/g,'&quot;')+'" oninput="scanExtractedRows['+i+'].name=this.value"><input aria-label="Jersey number" placeholder="Jersey #" value="'+escapeHtml(r.number)+'" oninput="scanExtractedRows['+i+'].number=this.value"></div><input aria-label="Position" style="margin-top:6px;width:100%" placeholder="Position (SS, CF, etc.)" value="'+escapeHtml(r.position)+'" oninput="scanExtractedRows['+i+'].position=this.value"></div>').join('');
  document.getElementById('scanReview').style.display='block';
 }
+function addScanRow(){
+ if(scanExtractedRows.length>=25)return;
+ scanExtractedRows.push({name:'',number:'',position:''});
+ renderScanReview();
+}
 async function simulateScan(){
  const f=document.getElementById('lineupGallery').files[0]||document.getElementById('lineupPhoto').files[0];
  const status=document.getElementById('scanStatus'),button=document.getElementById('scanReadButton');
@@ -547,15 +552,17 @@ async function simulateScan(){
   await loadLineupOCR();
   const cropped=await prepareLineupImage(f);
   const first=await window.Tesseract.recognize(cropped,'eng');
+  document.getElementById('scanRawText').textContent=first.data.text||'(No text detected in cropped image)';
   scanExtractedRows=parseLineupText(first.data.text||'');
   if(!scanExtractedRows.length){
    status.textContent='Trying full photo…';
    const second=await window.Tesseract.recognize(f,'eng');
+   document.getElementById('scanRawText').textContent+='\n--- FULL PHOTO ---\n'+(second.data.text||'(No text detected)');
    scanExtractedRows=parseLineupText(second.data.text||'');
   }
   if(!scanExtractedRows.length){
    status.textContent='Automatic reading failed. You can enter the lineup rows below instead.';
-   scanExtractedRows=Array.from({length:9},()=>({name:'',number:'',position:''}));
+   scanExtractedRows=Array.from({length:11},()=>({name:'',number:'',position:''}));
   }else status.textContent='Detected '+scanExtractedRows.length+' rows. Verify every name, number and position before confirming.';
   renderScanReview();
  }catch(err){
