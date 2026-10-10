@@ -311,7 +311,13 @@ async function loadCloudRoster(){
  const {data,error}=await nplayCloud.from('players').select('id,first_name,last_name,jersey_number,position,active').eq('team_id',currentCloudTeam.id).eq('active',true).order('created_at',{ascending:true});
  if(error){console.warn('NPlay roster load:',error.message);return}
  players=(data||[]).map(p=>({id:p.id,n:(p.jersey_number?'#'+p.jersey_number+' ':'')+p.first_name+(p.last_name?' '+p.last_name:''),pos:p.position||'Player',att:'No RSVP',cloud:true}));
- batting=players.slice(0,9).map(p=>p.id);
+ const stored=JSON.parse(localStorage.getItem('nplay_lineup_'+currentCloudTeam.id)||'null');
+ if(stored&&Array.isArray(stored.order)){
+  const byId=new Map(players.map(p=>[String(p.id),p]));
+  batting=stored.order.filter(id=>byId.has(String(id)));
+  for(const p of players){const pos=stored.positions&&stored.positions[String(p.id)];if(pos)p.pos=pos}
+  if(!batting.length)batting=players.slice(0,9).map(p=>p.id);
+ }else batting=players.slice(0,9).map(p=>p.id);
  renderRoster();
 }
 async function addCloudPlayer(){
@@ -638,7 +644,16 @@ async function confirmScan(){
    if(row.position)found.pos=row.position;
    batting.push(found.id);
   }
-  if(isPrototypeMode()||!currentCloudTeam)save();
+  if(!isPrototypeMode()&&currentCloudTeam&&nplayCloud){
+   const changed=rows.map(row=>players.find(p=>normalize(p.n)===normalize(row.name))).filter(p=>p&&p.cloud&&p.pos&&p.pos!=='Player');
+   const errors=[];
+   for(const p of changed){
+    const {error}=await nplayCloud.from('players').update({position:p.pos}).eq('id',p.id).eq('team_id',currentCloudTeam.id);
+    if(error)errors.push(p.n+': '+error.message);
+   }
+   localStorage.setItem('nplay_lineup_'+currentCloudTeam.id,JSON.stringify({order:batting,positions:Object.fromEntries(players.map(p=>[String(p.id),p.pos]))}));
+   if(errors.length)alert('Lineup saved on this device, but some cloud positions could not be updated: '+errors.join('; '));
+  }else save();
   renderRoster();
  }else{
   opponentBatting=rows.map(r=>(r.number?'#'+r.number+' ':'')+r.name+(r.position?' — '+r.position:''));
