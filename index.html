@@ -490,25 +490,25 @@ function loadLineupOCR(){
  });
 }
 function parseLineupText(raw){
- const result=[],positions='P|C|1B|2B|3B|SS|LF|CF|RF|OF|DP|DH|EH|UTIL';
+ const rows=[],positions='P|C|1B|2B|3B|SS|LF|CF|RF|OF|DP|DH|EH|UTIL';
  for(const original of raw.split(/\r?\n/)){
-  const line=original.trim().replace(/[|]/g,' ').replace(/\s+/g,' ');
-  const orderMatch=line.match(/^(\d{1,2})\s*[.)-]?\s+/);
-  if(!orderMatch)continue;
-  const order=Number(orderMatch[1]);if(order<1||order>25)continue;
-  let rest=line.slice(orderMatch[0].length).trim();
-  const posMatch=rest.match(new RegExp('(?:\\s|,|[-–—])('+positions+')\\s*$','i'));
-  const position=posMatch?posMatch[1].toUpperCase():'';
-  if(posMatch)rest=rest.slice(0,posMatch.index).trim();
-  const numberMatch=rest.match(/[, ]*#\s*(\d{1,3})\s*$/);
-  const number=numberMatch?numberMatch[1]:'';
-  if(numberMatch)rest=rest.slice(0,numberMatch.index).trim();
-  rest=rest.replace(/[,;]+$/,'').trim();
-  if(!/^[A-Za-z][A-Za-z .'-]{1,45}$/.test(rest))continue;
-  if(result.some(x=>x.order===order))continue;
-  result.push({order,name:rest,number,position});
+  let line=original.trim().replace(/[|]/g,' ').replace(/\s+/g,' ');
+  // OCR may put baseball diamonds or bat icons before the row number.
+  const start=line.match(/(?:^|\s)(\d{1,2})\s*[.)]\s*/);
+  if(!start)continue;
+  const order=Number(start[1]);if(order<1||order>25||rows.some(r=>r.order===order))continue;
+  let rest=line.slice(start.index+start[0].length).trim();
+  const pos=rest.match(new RegExp('(?:\\s|,|[-–—])('+positions+')\\s*$','i'));
+  const position=pos?pos[1].toUpperCase():'';
+  if(pos)rest=rest.slice(0,pos.index).trim();
+  const jersey=rest.match(/[, ]*#\s*(\d{1,3})/);
+  const number=jersey?jersey[1]:'';
+  if(jersey)rest=rest.slice(0,jersey.index).trim();
+  rest=rest.replace(/[,;:]+$/,'').trim();
+  if(!/^[A-Za-z][A-Za-z .'-]{1,55}$/.test(rest)||rest.length<3)continue;
+  rows.push({order,name:rest,number,position});
  }
- return result.sort((a,b)=>a.order-b.order).slice(0,25);
+ return rows.sort((a,b)=>a.order-b.order).slice(0,25);
 }
 async function prepareLineupImage(file){
  const url=URL.createObjectURL(file);
@@ -551,23 +551,23 @@ async function simulateScan(){
  try{
   await loadLineupOCR();
   const cropped=await prepareLineupImage(f);
-  const first=await window.Tesseract.recognize(cropped,'eng');
+  const first=await window.Tesseract.recognize(cropped,'eng',{tessedit_pageseg_mode:'6'});
   document.getElementById('scanRawText').textContent=first.data.text||'(No text detected in cropped image)';
   scanExtractedRows=parseLineupText(first.data.text||'');
   if(!scanExtractedRows.length){
    status.textContent='Trying full photo…';
-   const second=await window.Tesseract.recognize(f,'eng');
+   const second=await window.Tesseract.recognize(f,'eng',{tessedit_pageseg_mode:'11'});
    document.getElementById('scanRawText').textContent+='\n--- FULL PHOTO ---\n'+(second.data.text||'(No text detected)');
    scanExtractedRows=parseLineupText(second.data.text||'');
   }
   if(!scanExtractedRows.length){
-   status.textContent='Automatic reading failed. You can enter the lineup rows below instead.';
+   status.textContent='Photo uploaded, but the text reader could not extract player rows. Expand Scanner diagnostic text below to see what it read. You can edit the lineup manually.';
    scanExtractedRows=Array.from({length:11},()=>({name:'',number:'',position:''}));
   }else status.textContent='Detected '+scanExtractedRows.length+' rows. Verify every name, number and position before confirming.';
   renderScanReview();
  }catch(err){
   status.textContent='Text recognition failed: '+(err.message||err)+'. You can enter the lineup manually.';
-  scanExtractedRows=Array.from({length:9},()=>({name:'',number:'',position:''}));
+  scanExtractedRows=Array.from({length:11},()=>({name:'',number:'',position:''}));
   renderScanReview();
  }finally{button.disabled=false}
 }
